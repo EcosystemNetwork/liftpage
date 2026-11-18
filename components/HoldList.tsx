@@ -1,9 +1,11 @@
 import { setHoldStatus } from "@/app/actions/admin";
 import { fmt } from "@/lib/stats";
+import { stripeReady } from "@/lib/stripe";
 import { HOLD_STATUSES, PACKAGES, type Hold } from "@/lib/types";
 import { KICKER } from "@/lib/ui";
 import { ConvertHold } from "./ConvertHold";
 import { RowButton } from "./forms";
+import { PayButton } from "./PayButton";
 
 const STATUS_LABEL = { requested: "Requested", contacted: "Contacted", won: "Won", lost: "Lost" } as const;
 
@@ -36,7 +38,17 @@ export function HoldList({ holds, admin = false }: { holds: Hold[]; admin?: bool
                 </td>
               ) : null}
               <td className="px-3 py-2">{PACKAGES[hold.packageId].name}</td>
-              <td className="px-3 py-2 text-right font-mono">{fmt.money(hold.amount)}</td>
+              <td className="px-3 py-2 text-right font-mono">
+                {fmt.money(hold.amount)}
+                {hold.paidAt ? (
+                  <span className="block text-xs text-tape">
+                    paid {fmt.money(hold.amountPaid ?? hold.amount)} ·{" "}
+                    {new Date(hold.paidAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  </span>
+                ) : !admin && stripeReady() && (hold.status === "requested" || hold.status === "contacted") ? (
+                  <PayButton holdId={hold.id} label="Pay deposit" className="mt-2" />
+                ) : null}
+              </td>
               <td className="px-3 py-2">
                 {admin ? (
                   // Keyed on status: remounts with the saved value instead of React's reset restoring the old one.

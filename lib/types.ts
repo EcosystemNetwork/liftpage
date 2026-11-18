@@ -13,10 +13,48 @@ export type Post = {
   visual: string;
   reply: string;
   status: Status;
+  /** Public URL of the uploaded image or video, if any. */
+  mediaUrl?: string;
+  mediaType?: string;
+  publishState: PublishState;
+  publishError?: string;
+  publishedUrl?: string;
+  publishedAt?: string;
+  notes: PostNote[];
+};
+
+export const NOTE_KINDS = ["approved", "changes", "comment"] as const;
+
+export type NoteKind = (typeof NOTE_KINDS)[number];
+
+/** Review on a post, mostly from the client whose board it is. */
+export type PostNote = {
+  id: string;
+  postId: string;
+  authorId?: string;
+  authorName: string;
+  role: Role;
+  kind: NoteKind;
+  text: string;
+  at: string;
+};
+
+export const PUBLISH_STATES = ["idle", "scheduled", "publishing", "published", "failed"] as const;
+
+export type PublishState = (typeof PUBLISH_STATES)[number];
+
+/** A network account connected to a board. Tokens never leave the server. */
+export type Connection = {
+  platform: Platform;
+  accountName: string;
+  connectedAt: string;
+  expiresAt?: string;
 };
 
 export type Brand = {
   id: string;
+  /** The client this board belongs to. Missing on the house board. */
+  clientId?: string;
   name: string;
   handle: string;
   voice: string;
@@ -50,6 +88,9 @@ export type Hold = {
   /** The client account this request belongs to, once there is one. */
   userId?: string;
   note?: string;
+  /** Set by the Stripe webhook once the deposit clears. */
+  amountPaid?: number;
+  paidAt?: string;
 };
 
 export const HOLD_STATUSES = ["requested", "contacted", "won", "lost"] as const;
@@ -64,16 +105,13 @@ export type User = {
   name: string;
   company: string;
   role: Role;
-  passwordHash: string;
   createdAt: string;
   lastLoginAt?: string;
   disabled: boolean;
-  /** Bumped to sign the user out everywhere. */
-  sessionVersion: number;
 };
 
-/** What leaves the server about a user. Never the hash. */
-export type PublicUser = Omit<User, "passwordHash" | "sessionVersion">;
+/** Passwords live in Supabase Auth, so a profile row is safe to hand to a page. */
+export type PublicUser = User;
 
 /** One week of numbers for one client on one platform. */
 export type Metric = {
@@ -88,9 +126,12 @@ export type Metric = {
   clicks: number;
   leads: number;
   at: string;
-  /** Who entered it. */
+  /** Who entered it: a user id, or "sync:<platform>". */
   by: string;
+  source?: MetricSource;
 };
+
+export type MetricSource = "manual" | "csv" | "sync";
 
 export const METRIC_FIELDS = ["followers", "impressions", "engagements", "clicks", "leads"] as const;
 
@@ -101,11 +142,19 @@ export type AccountsFile = {
   metrics: Metric[];
 };
 
+/** One line per board for the desk's switcher. */
+export type BoardSummary = { id: string; name: string; clientId?: string; company?: string };
+
 export type DeskFile = {
+  /** The board on screen. */
   brand: Brand;
+  boards: BoardSummary[];
   posts: Post[];
   runs: Run[];
   holds: Hold[];
+  connections: Connection[];
+  /** Networks whose OAuth app keys are set, so Connect can work. */
+  connectable: Platform[];
 };
 
 export const PLATFORM_NAME: Record<Platform, string> = {

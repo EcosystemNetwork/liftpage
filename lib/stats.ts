@@ -102,3 +102,33 @@ export function bookStats(accounts: AccountsFile, desk: DeskFile, now = Date.now
     customers,
   };
 }
+
+/* ---------- Ranges ---------- */
+
+export const RANGES = [
+  ["4w", "4 weeks", 4],
+  ["12w", "12 weeks", 12],
+  ["26w", "6 months", 26],
+  ["52w", "1 year", 52],
+  ["all", "All", null],
+] as const;
+
+export type RangeKey = (typeof RANGES)[number][0];
+
+export function rangeFrom(value: unknown): RangeKey {
+  return RANGES.some(([key]) => key === value) ? (value as RangeKey) : "12w";
+}
+
+/** First Monday inside the range, or null for all time. */
+export function rangeStart(range: RangeKey, now = new Date()): string | null {
+  const weeks = RANGES.find(([key]) => key === range)?.[2] ?? null;
+  if (weeks === null) return null;
+  const monday = new Date(`${weekOf(now)}T00:00:00Z`);
+  monday.setUTCDate(monday.getUTCDate() - (weeks - 1) * 7);
+  return monday.toISOString().slice(0, 10);
+}
+
+export function inRange<T extends { week: string }>(rows: T[], range: RangeKey, now = new Date()): T[] {
+  const start = rangeStart(range, now);
+  return start ? rows.filter((row) => row.week >= start) : rows;
+}

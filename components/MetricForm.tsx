@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { saveMetric } from "@/app/actions/metrics";
+import { importCsv, saveMetric } from "@/app/actions/metrics";
 import { PLATFORMS, PLATFORM_NAME } from "@/lib/types";
 import { INPUT, LABEL } from "@/lib/ui";
 import { Message, Submit } from "./forms";
@@ -47,6 +47,27 @@ export function MetricForm({ userId, today }: { userId?: string; today: string }
       <Message state={state} />
       <Submit busy="Saving" className="justify-self-start">
         Save week
+      </Submit>
+    </form>
+  );
+}
+
+export function ImportForm({ userId }: { userId?: string }) {
+  const [state, action] = useActionState(importCsv, undefined);
+  return (
+    <form action={action} className="grid gap-3">
+      {userId ? <input type="hidden" name="userId" value={userId} /> : null}
+      <label className={LABEL}>
+        CSV file
+        <input name="file" type="file" accept=".csv,text/csv" required className={`${INPUT} py-2`} />
+      </label>
+      <p className="text-xs text-mute">
+        Columns: <code className="font-mono">week, platform, followers, impressions, engagements, clicks, leads</code>. Blank cells keep what&rsquo;s
+        there. An export from this page imports back.
+      </p>
+      <Message state={state} />
+      <Submit busy="Importing" className="justify-self-start">
+        Import
       </Submit>
     </form>
   );

@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { PACKAGES, type PackageId } from "@/lib/types";
+import { PayButton } from "./PayButton";
 
 const ORDER: PackageId[] = ["event", "starter", "growth", "accelerator"];
 
 export function RequestForm() {
   const [status, setStatus] = useState<"idle" | "sending" | "done" | "error">("idle");
   const [error, setError] = useState("");
+  const [holdId, setHoldId] = useState("");
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -25,12 +27,13 @@ export function RequestForm() {
           packageId: data.get("packageId"),
         }),
       });
-      const body = (await response.json().catch(() => ({}))) as { error?: string };
+      const body = (await response.json().catch(() => ({}))) as { error?: string; holdId?: string };
       if (!response.ok) {
         setStatus("error");
         setError(body.error || "The request didn't send.");
         return;
       }
+      setHoldId(body.holdId ?? "");
       setStatus("done");
     } catch {
       setStatus("error");
@@ -40,9 +43,15 @@ export function RequestForm() {
 
   if (status === "done") {
     return (
-      <p role="status" className="border border-tape px-4 py-4 text-paper">
-        Requested. We&apos;ll answer that email. Nothing was charged.
-      </p>
+      <div role="status" className="grid gap-3 border border-tape px-4 py-4 text-paper">
+        <p>Requested. A confirmation is on its way to that email, and we&apos;ll answer within a business day. Nothing was charged.</p>
+        {holdId ? (
+          <div className="grid gap-2">
+            <p className="text-sm text-mute">Want the slot held now? Pay the deposit and we start on the brief.</p>
+            <PayButton holdId={holdId} label="Pay deposit" />
+          </div>
+        ) : null}
+      </div>
     );
   }
 

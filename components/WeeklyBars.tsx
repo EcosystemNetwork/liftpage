@@ -7,7 +7,7 @@ const PAD = { top: 12, right: 8, bottom: 24, left: 44 };
 
 /** One series, one axis. Hover a week for its value. The table below is the accessible view. */
 export function WeeklyBars({ weeks, field, title }: { weeks: WeekTotals[]; field: MetricField; title: string }) {
-  const rows = weeks.slice(-12);
+  const rows = weeks.slice(-52);
   if (rows.length === 0) return null;
   const max = Math.max(1, ...rows.map((row) => row[field]));
   const top = niceCeil(max);
@@ -16,6 +16,8 @@ export function WeeklyBars({ weeks, field, title }: { weeks: WeekTotals[]; field
   const slot = plotW / rows.length;
   const barW = Math.min(36, slot - 2);
   const ticks = [0, top / 2, top];
+  // Label the latest week, then every `step` back, so labels never crowd.
+  const step = rows.length <= 7 ? 1 : Math.ceil(rows.length / 7);
 
   return (
     <figure className="border border-line p-3">
@@ -42,7 +44,7 @@ export function WeeklyBars({ weeks, field, title }: { weeks: WeekTotals[]; field
             <g key={row.week} className="group">
               <rect x={PAD.left + i * slot} y={PAD.top} width={slot} height={plotH} fill="transparent" />
               <path d={topRounded(x, y, barW, h, r)} fill="var(--tape)" className="opacity-85 group-hover:opacity-100" />
-              {i === 0 || i === rows.length - 1 || rows.length <= 6 ? (
+              {(rows.length - 1 - i) % step === 0 ? (
                 <text x={x + barW / 2} y={H - 6} textAnchor="middle" fontSize={11} fill="var(--mute)" fontFamily="var(--font-mono-face)">
                   {fmt.week(row.week)}
                 </text>

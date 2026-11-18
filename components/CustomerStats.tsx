@@ -1,8 +1,13 @@
+"use client";
+
+import { usePathname, useSearchParams } from "next/navigation";
 import { deleteMetric } from "@/app/actions/metrics";
-import { change, fmt, summarize } from "@/lib/stats";
+import { change, fmt, inRange, rangeFrom, summarize } from "@/lib/stats";
 import { PLATFORM_NAME, type Metric } from "@/lib/types";
 import { KICKER } from "@/lib/ui";
 import { RowButton } from "./forms";
+import { ImportForm } from "./MetricForm";
+import { RangeBar } from "./RangeBar";
 import { WeeklyBars } from "./WeeklyBars";
 
 export function Tile({ label, value, delta, note }: { label: string; value: string; delta?: number | null; note?: string }) {
@@ -17,16 +22,48 @@ export function Tile({ label, value, delta, note }: { label: string; value: stri
   );
 }
 
-export function CustomerStats({ metrics, canDelete }: { metrics: Metric[]; canDelete: boolean }) {
+/**
+ * A client's numbers. Reads ?range= from the URL itself, so pages only pass the rows.
+ * Pass `userId` when an admin is looking at someone else's account.
+ */
+export function CustomerStats({ metrics: all, canDelete, userId }: { metrics: Metric[]; canDelete: boolean; userId?: string }) {
+  const range = rangeFrom(useSearchParams().get("range"));
+  const path = usePathname();
+  const owner = userId ?? all[0]?.userId;
+  const exportHref = `/export/metrics?range=${range}${owner ? `&user=${encodeURIComponent(owner)}` : ""}`;
+  const bar = <RangeBar path={path} range={range} exportHref={exportHref} />;
+  const importer = (
+    <details className="border border-line p-4">
+      <summary className="cursor-pointer font-mono text-[11px] uppercase tracking-[0.14em] text-paper">Import weeks from a CSV</summary>
+      <div className="mt-4 max-w-2xl">
+        <ImportForm userId={userId} />
+      </div>
+    </details>
+  );
+  if (all.length === 0) {
+    return (
+      <div className="grid gap-6">
+        <p className="border border-line px-4 py-6 text-mute">No numbers yet. Import a CSV, or log the first week below.</p>
+        {importer}
+      </div>
+    );
+  }
+  const metrics = inRange(all, range);
   const s = summarize(metrics);
   if (!s.latest) {
-    return <p className="border border-line px-4 py-6 text-mute">No numbers yet. Log the first week below.</p>;
+    return (
+      <div className="grid gap-6">
+        {bar}
+        <p className="border border-line px-4 py-6 text-mute">Nothing logged in this range. Pick a longer one.</p>
+      </div>
+    );
   }
   const { latest, previous } = s;
   const rows = [...metrics].sort((a, b) => b.week.localeCompare(a.week) || a.platform.localeCompare(b.platform));
 
   return (
     <div className="grid gap-6 [&>*]:min-w-0">
+      {bar}
       <p className="font-mono text-xs text-mute">Latest week: {fmt.week(latest.week)}, all platforms</p>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <Tile label="Followers" value={fmt.compact(latest.followers)} delta={change(latest.followers, previous?.followers)} />
@@ -64,7 +101,7 @@ export function CustomerStats({ metrics, canDelete }: { metrics: Metric[]; canDe
       ) : null}
 
       <div className="overflow-x-auto border border-line">
-        <table className="w-full min-w-[42rem] text-sm">
+        <table className="w-full min-w-[48rem] text-sm">
           <caption className="sr-only">Every logged week</caption>
           <thead className={`${KICKER} text-mute`}>
             <tr className="border-b border-line text-left">
@@ -75,6 +112,7 @@ export function CustomerStats({ metrics, canDelete }: { metrics: Metric[]; canDe
               <th className="px-3 py-2 text-right font-normal">Engagements</th>
               <th className="px-3 py-2 text-right font-normal">Clicks</th>
               <th className="px-3 py-2 text-right font-normal">Leads</th>
+              <th className="px-3 py-2 font-normal">Source</th>
               {canDelete ? <th className="px-3 py-2" /> : null}
             </tr>
           </thead>
@@ -88,6 +126,7 @@ export function CustomerStats({ metrics, canDelete }: { metrics: Metric[]; canDe
                 <td className="px-3 py-2 text-right">{fmt.whole(m.engagements)}</td>
                 <td className="px-3 py-2 text-right">{fmt.whole(m.clicks)}</td>
                 <td className="px-3 py-2 text-right">{fmt.whole(m.leads)}</td>
+                <td className="px-3 py-2 text-xs text-mute">{m.source ?? "manual"}</td>
                 {canDelete ? (
                   <td className="px-3 py-1 text-right">
                     <form action={deleteMetric}>
@@ -101,6 +140,7 @@ export function CustomerStats({ metrics, canDelete }: { metrics: Metric[]; canDe
           </tbody>
         </table>
       </div>
+      {importer}
     </div>
   );
 }

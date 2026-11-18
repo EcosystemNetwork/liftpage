@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { PasswordForm } from "@/components/AuthForms";
+import { SyncButton } from "@/components/BoardForms";
+import { ClientBoard } from "@/components/ClientBoard";
 import { CustomerStats } from "@/components/CustomerStats";
 import { Header } from "@/components/Header";
 import { MetricForm } from "@/components/MetricForm";
 import { HoldList } from "@/components/HoldList";
-import { loadAccounts } from "@/lib/accounts";
 import { requireUser } from "@/lib/dal";
-import { loadDesk } from "@/lib/store";
+import { boardForClient, connectionsFor, holdsFor } from "@/lib/store";
+import { db, must } from "@/lib/supabase/server";
+import { toMetric } from "@/lib/accounts";
 import { KICKER } from "@/lib/ui";
 
 export const metadata = { title: "Account" };
@@ -14,9 +17,13 @@ export const metadata = { title: "Account" };
 export default async function AccountPage() {
   const user = await requireUser("/account");
   const isClient = user.role === "client";
-  const [accounts, desk] = await Promise.all([loadAccounts(), loadDesk()]);
-  const metrics = accounts.metrics.filter((m) => m.userId === user.id);
-  const holds = desk.holds.filter((hold) => hold.userId === user.id);
+  const [rows, holds, board] = await Promise.all([
+    db().from("metrics").select("*").eq("user_id", user.id).order("week"),
+    holdsFor(user.id),
+    isClient ? boardForClient(user.id) : null,
+  ]);
+  const metrics = (must(rows, "load numbers") ?? []).map(toMetric);
+  const synced = board ? (await connectionsFor(board.brand.id)).length > 0 : false;
   const today = new Date().toISOString().slice(0, 10);
 
   return (
@@ -41,10 +48,27 @@ export default async function AccountPage() {
         {isClient ? (
           <>
             <section aria-labelledby="numbers">
-              <h2 id="numbers" className="mb-4 text-2xl font-semibold">
-                Your numbers
+              <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+                <h2 id="numbers" className="text-2xl font-semibold">
+                  Your numbers
+                </h2>
+                {synced ? <SyncButton /> : null}
+              </div>
+              <CustomerStats metrics={metrics} canDelete userId={user.id} />
+            </section>
+
+            <section aria-labelledby="board">
+              <h2 id="board" className="text-2xl font-semibold">
+                Your board
               </h2>
-              <CustomerStats metrics={metrics} canDelete />
+              <p className="mt-2 mb-4 text-mute">
+                What LiftPage plans to post. Approve a draft, send it back with a note, or comment. LiftPage schedules and publishes.
+              </p>
+              {board ? (
+                <ClientBoard brand={board.brand} posts={board.posts} />
+              ) : (
+                <p className="border border-line px-4 py-6 text-mute">No board yet. LiftPage opens one when your campaign starts.</p>
+              )}
             </section>
 
             <section aria-labelledby="log" className="max-w-3xl">

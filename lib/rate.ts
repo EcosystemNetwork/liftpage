@@ -1,23 +1,27 @@
-/**
- * In-memory fixed-window limiter. One process, one window. Good enough for a single
- * node; put it behind a shared store before running more than one.
- */
-const hits = new Map<string, { count: number; reset: number }>();
+import "server-only";
+import { db, supabaseReady } from "./supabase/server";
 
-export function limited(key: string, max: number, windowMs: number): boolean {
-  const now = Date.now();
-  if (hits.size > 5000) {
-    for (const [k, v] of hits) if (v.reset < now) hits.delete(k);
-  }
-  const entry = hits.get(key);
-  if (!entry || entry.reset < now) {
-    hits.set(key, { count: 1, reset: now + windowMs });
+/**
+ * Fixed-window limiter kept in Postgres, so it holds across every server instance.
+ * Fails open: a database hiccup shouldn't lock everyone out of signing in.
+ */
+export async function limited(key: string, max: number, windowMs: number): Promise<boolean> {
+  if (!supabaseReady()) return false;
+  const { data, error } = await db().rpc("hit_rate_limit", { p_key: key, p_max: max, p_window_ms: windowMs });
+  if (error) {
+    console.error("rate limit", error.message);
     return false;
   }
-  entry.count += 1;
-  return entry.count > max;
+  return data === true;
 }
 
-export function clearLimit(key: string) {
-  hits.delete(key);
+export async function clearLimit(key: string) {
+  if (!supabaseReady()) return;
+  await db().from("rate_limits").delete().eq("key", key);
+}
+
+export async function clientIp(): Promise<string> {
+  const { headers } = await import("next/headers");
+  const list = await headers();
+  return list.get("x-forwarded-for")?.split(",")[0]?.trim() || list.get("x-real-ip") || "local";
 }

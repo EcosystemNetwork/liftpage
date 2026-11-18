@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { changePassword, login, signup } from "@/app/actions/auth";
+import { changePassword, forgotPassword, login, setPassword, signup } from "@/app/actions/auth";
 import { INPUT, LABEL } from "@/lib/ui";
 import { Message, Submit } from "./forms";
 
@@ -72,6 +72,39 @@ export function PasswordForm() {
       <Message state={state} />
       <Submit busy="Saving" className="justify-self-start">
         Change password
+      </Submit>
+    </form>
+  );
+}
+
+export function SetPasswordForm() {
+  const [state, action] = useActionState(setPassword, undefined);
+  return (
+    <form action={action} className="grid gap-4">
+      <label className={LABEL}>
+        New password
+        <input name="password" type="password" autoComplete="new-password" minLength={10} required className={INPUT} />
+        <span className="text-xs text-mute">Ten characters or more.</span>
+      </label>
+      <Message state={state} />
+      <Submit busy="Saving" className="justify-self-start">
+        Set password
+      </Submit>
+    </form>
+  );
+}
+
+export function ForgotForm() {
+  const [state, action] = useActionState(forgotPassword, undefined);
+  return (
+    <form action={action} className="grid gap-4">
+      <label className={LABEL}>
+        Email
+        <input name="email" type="email" autoComplete="email" required defaultValue={state?.fields?.email} className={INPUT} />
+      </label>
+      <Message state={state} />
+      <Submit busy="Sending" className="justify-self-start">
+        Send reset link
       </Submit>
     </form>
   );

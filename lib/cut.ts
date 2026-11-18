@@ -3,7 +3,7 @@ import { futureSlots } from "./time";
 import type { Brand, CutVia, Platform, Post } from "./types";
 import { PLATFORMS } from "./types";
 
-export type DraftPost = Omit<Post, "id" | "status">;
+export type DraftPost = Pick<Post, "platform" | "slot" | "hook" | "caption" | "visual" | "reply">;
 
 const PLATFORM_SET = new Set<string>(PLATFORMS);
 
@@ -342,6 +342,6 @@ export async function cutWeek(
   return {
     via,
     note: notes.join(" "),
-    posts: drafts.map((draft) => ({ ...draft, id: nid("p"), status: "draft" as const })),
+    posts: drafts.map((draft) => ({ ...draft, id: nid("p"), status: "draft" as const, publishState: "idle" as const, notes: [] })),
   };
 }

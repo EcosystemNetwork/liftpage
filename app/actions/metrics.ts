@@ -1,9 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { updateAccounts } from "@/lib/accounts";
+import { findUser } from "@/lib/accounts";
 import { requireUser } from "@/lib/dal";
-import { nid } from "@/lib/id";
+import { readMetricCsv, upsertMetrics } from "@/lib/metrics";
+import { db, must } from "@/lib/supabase/server";
 import { weekOf } from "@/lib/stats";
 import { METRIC_FIELDS, PLATFORMS, type Platform } from "@/lib/types";
 import type { FormState } from "./auth";
@@ -16,6 +17,11 @@ function count(data: FormData, key: string): number | null {
   const n = Number(raw.replace(/[,\s]/g, ""));
   if (!Number.isFinite(n) || n < 0 || n > MAX) return null;
   return Math.round(n);
+}
+
+async function isClient(userId: string): Promise<boolean> {
+  const owner = await findUser(userId);
+  return Boolean(owner && owner.role === "client");
 }
 
 /** Records one week on one platform. Same week + platform overwrites. */
@@ -52,16 +58,8 @@ async function trySave(data: FormData): Promise<FormState> {
     return { error: "Engagements can't be more than impressions." };
   }
 
-  const found = await updateAccounts((file) => {
-    const owner = file.users.find((user) => user.id === userId);
-    if (!owner || owner.role !== "client") return false;
-    const at = new Date().toISOString();
-    const existing = file.metrics.find((m) => m.userId === userId && m.week === week && m.platform === platform);
-    if (existing) Object.assign(existing, values, { at, by: me.id });
-    else file.metrics.push({ id: nid("met"), userId, week, platform, ...values, at, by: me.id });
-    return true;
-  });
-  if (!found) return { error: "Numbers go on a client account." };
+  if (!(await isClient(userId))) return { error: "Numbers go on a client account." };
+  await upsertMetrics([{ userId, week, platform, ...values }], me.id, "manual");
   revalidatePath("/account");
   revalidatePath("/admin", "layout");
   return { ok: "Saved." };
@@ -70,10 +68,34 @@ async function trySave(data: FormData): Promise<FormState> {
 export async function deleteMetric(data: FormData) {
   const me = await requireUser();
   const id = typeof data.get("id") === "string" ? (data.get("id") as string) : "";
-  await updateAccounts((file) => {
-    const index = file.metrics.findIndex((m) => m.id === id && (me.role === "admin" || m.userId === me.id));
-    if (index >= 0) file.metrics.splice(index, 1);
-  });
+  if (!id) return;
+  let query = db().from("metrics").delete().eq("id", id);
+  // Clients only ever delete their own rows.
+  if (me.role !== "admin") query = query.eq("user_id", me.id);
+  must(await query, "delete metric");
   revalidatePath("/account");
   revalidatePath("/admin", "layout");
+}
+
+// Under the 1 MB Server Action body limit, with room for the multipart envelope.
+const MAX_CSV_BYTES = 900_000;
+
+/** Bulk weeks from a CSV: week,platform,followers,impressions,engagements,clicks,leads. */
+export async function importCsv(_: FormState, data: FormData): Promise<FormState> {
+  const me = await requireUser();
+  const asked = typeof data.get("userId") === "string" ? (data.get("userId") as string) : "";
+  const userId = me.role === "admin" && asked ? asked : me.id;
+  const file = data.get("file");
+  if (!(file instanceof File) || file.size === 0) return { error: "Pick a CSV file." };
+  if (file.size > MAX_CSV_BYTES) return { error: "Keep the file under 900 KB." };
+
+  const { rows, errors } = readMetricCsv(await file.text());
+  if (rows.length === 0) return { error: errors.slice(0, 3).join(" ") || "No usable rows." };
+
+  if (!(await isClient(userId))) return { error: "Numbers go on a client account." };
+  await upsertMetrics(rows.map((row) => ({ userId, ...row })), me.id, "csv");
+  revalidatePath("/account");
+  revalidatePath("/admin", "layout");
+  const skipped = errors.length ? ` Skipped ${errors.length}: ${errors.slice(0, 3).join(" ")}${errors.length > 3 ? " …" : ""}` : "";
+  return { ok: `Imported ${rows.length} row${rows.length === 1 ? "" : "s"}.${skipped}` };
 }

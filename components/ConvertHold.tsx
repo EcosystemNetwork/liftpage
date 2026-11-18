@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import { accountFromHold } from "@/app/actions/admin";
 import { Message, RowButton } from "./forms";
 
-/** Stays mounted after the hold links, so the one-time password survives the refresh. */
+/** Stays mounted after the hold links, so a one-time invite link shown here survives the refresh. */
 export function ConvertHold({ holdId, linked }: { holdId: string; linked: boolean }) {
   const [state, action] = useActionState(accountFromHold, undefined);
   if (state?.ok) return <Message state={state} />;

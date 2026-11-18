@@ -1,8 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { dayKey, formatClock, formatDay, formatSlot } from "@/lib/time";
-import { PACKAGES, PLATFORM_NAME, type DeskFile, type Platform, type Post, type Status } from "@/lib/types";
+import { PACKAGES, PLATFORM_NAME, PLATFORMS, type DeskFile, type Platform, type Post, type Status } from "@/lib/types";
 
 const MARK: Record<Platform, string> = {
   x: "X",
@@ -12,15 +13,20 @@ const MARK: Record<Platform, string> = {
   youtube: "YT",
 };
 
-export function Desk({ initial }: { initial: DeskFile }) {
+type Flash = { tone: "ok" | "error"; text: string };
+
+export function Desk({ initial, flash }: { initial: DeskFile; flash?: Flash }) {
   const [desk, setDesk] = useState(initial);
   const [selected, setSelected] = useState(initial.posts[0]?.id ?? "");
   const [draft, setDraft] = useState<Post | undefined>(initial.posts[0]);
   const [brief, setBrief] = useState("");
   const [busy, setBusy] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
+  const [error, setError] = useState(flash?.tone === "error" ? flash.text : "");
+  const [notice, setNotice] = useState(flash?.tone === "ok" ? flash.text : "");
+  const [publishing, setPublishing] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [reply, setReply] = useState("");
   const [clock, setClock] = useState("");
   const [editingVoice, setEditingVoice] = useState(false);
   const [voice, setVoice] = useState(initial.brand.voice);
@@ -58,25 +64,32 @@ export function Desk({ initial }: { initial: DeskFile }) {
     cued: desk.posts.filter((post) => post.status === "cued").length,
   };
 
-  async function send(url: string, body: unknown) {
+  const brandId = desk.brand.id;
+
+  /** Calls a desk API. Takes the fresh desk even from a failed call, so state stays honest. */
+  async function send(url: string, body: unknown, method: "POST" | "PATCH" = "PATCH"): Promise<{ desk: DeskFile; notice?: string }> {
     const response = await fetch(url, {
-      method: url.endsWith("/run") || url.endsWith("/hold") ? "POST" : "PATCH",
+      method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    const payload = (await response.json().catch(() => ({}))) as { desk?: DeskFile; error?: string };
+    const payload = (await response.json().catch(() => ({}))) as { desk?: DeskFile; error?: string; notice?: string };
+    if (payload.desk) {
+      setDesk(payload.desk);
+      const fresh = payload.desk.posts.find((item) => item.id === selected);
+      if (fresh && draft) setDraft({ ...fresh, hook: draft.hook, caption: draft.caption, visual: draft.visual, reply: draft.reply });
+    }
     if (!response.ok || !payload.desk) {
       throw new Error(payload.error || "The desk didn't answer.");
     }
-    return payload.desk;
+    return { desk: payload.desk, notice: payload.notice };
   }
 
   async function cutWeek() {
     setBusy(true);
     setError("");
     try {
-      const next = await send("/api/run", { brief });
-      setDesk(next);
+      const { desk: next } = await send("/api/run", { brief, brandId }, "POST");
       const run = next.runs[0];
       const first = run?.postIds[0];
       if (first) pick(first, next.posts);
@@ -93,9 +106,8 @@ export function Desk({ initial }: { initial: DeskFile }) {
     if (!draft) return;
     setError("");
     try {
-      const next = await send("/api/posts", { id: draft.id, status });
-      setDesk(next);
-      setNotice(status === "cued" ? "Cued on this desk. Nothing was sent to a network." : `Marked ${status}.`);
+      const { notice } = await send("/api/posts", { id: draft.id, status });
+      setNotice(notice ?? `Marked ${status}.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Status didn't save.");
     }
@@ -107,14 +119,15 @@ export function Desk({ initial }: { initial: DeskFile }) {
     setSaving(true);
     setError("");
     try {
-      const next = await send("/api/posts", {
+      const { desk: next } = await send("/api/posts", {
         id: draft.id,
         hook: draft.hook,
         caption: draft.caption,
         visual: draft.visual,
         reply: draft.reply,
       });
-      setDesk(next);
+      const saved = next.posts.find((item) => item.id === draft.id);
+      if (saved) setDraft(saved);
       setNotice("Line saved.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "The line didn't save.");
@@ -127,14 +140,85 @@ export function Desk({ initial }: { initial: DeskFile }) {
     event.preventDefault();
     setError("");
     try {
-      const next = await send("/api/brand", { voice, offers, platforms: desk.brand.platforms });
-      setDesk(next);
+      await send("/api/brand", { brandId, voice, offers, platforms: desk.brand.platforms });
       setEditingVoice(false);
       setNotice("Voice card saved. The next cut uses it.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Voice didn't save.");
     }
   }
+
+  async function publishNow() {
+    if (!draft) return;
+    setPublishing(true);
+    setError("");
+    try {
+      const { notice } = await send("/api/publish", { id: draft.id }, "POST");
+      setNotice(notice ?? "Published.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "It didn't publish.");
+    } finally {
+      setPublishing(false);
+    }
+  }
+
+  /** Straight to Supabase Storage on a signed URL, then the path goes on the post. */
+  async function upload(file: File) {
+    if (!draft) return;
+    setUploading(true);
+    setError("");
+    try {
+      const response = await fetch("/api/media", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postId: draft.id, type: file.type, size: file.size }),
+      });
+      const ticket = (await response.json().catch(() => ({}))) as { path?: string; signedUrl?: string; type?: string; error?: string };
+      if (!response.ok || !ticket.signedUrl || !ticket.path) throw new Error(ticket.error || "No upload slot.");
+      const put = await fetch(ticket.signedUrl, { method: "PUT", headers: { "Content-Type": file.type, "x-upsert": "false" }, body: file });
+      if (!put.ok) throw new Error(`Storage refused the file (${put.status}).`);
+      await send("/api/posts", { id: draft.id, mediaPath: ticket.path, mediaType: ticket.type });
+      setNotice("Media attached.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function dropMedia() {
+    if (!draft) return;
+    try {
+      await send("/api/posts", { id: draft.id, mediaPath: null });
+      setNotice("Media removed.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't remove it.");
+    }
+  }
+
+  async function sendReply(event: React.FormEvent) {
+    event.preventDefault();
+    if (!draft || !reply.trim()) return;
+    try {
+      await send("/api/notes", { postId: draft.id, text: reply }, "POST");
+      setReply("");
+      setNotice("Note sent.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "The note didn't save.");
+    }
+  }
+
+  async function unplug(platform: Platform) {
+    try {
+      await send(`/api/social/${platform}/disconnect`, { brandId }, "POST");
+      setNotice(`${PLATFORM_NAME[platform]} disconnected.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't disconnect.");
+    }
+  }
+
+  const board = desk.boards.find((item) => item.id === brandId);
+  const live = draft ? desk.posts.find((item) => item.id === draft.id) : undefined;
 
   return (
     <div className="rise">
@@ -145,12 +229,29 @@ export function Desk({ initial }: { initial: DeskFile }) {
         <section className="border-b border-line px-4 py-5 lg:col-start-2 lg:row-start-1 lg:border-r lg:px-6" aria-busy={busy}>
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <h1 className="text-lg font-semibold">LaunchLoop</h1>
+            {desk.boards.length > 1 ? (
+              <nav aria-label="Boards" className="flex flex-wrap gap-1 font-mono text-[11px] uppercase tracking-[0.12em]">
+                {desk.boards.map((item) => (
+                  <Link
+                    key={item.id}
+                    href={`/desk?board=${item.id}`}
+                    aria-current={item.id === brandId ? "page" : undefined}
+                    className={`inline-flex min-h-9 items-center border px-2 ${item.id === brandId ? "border-tape text-tape" : "border-line text-mute"}`}
+                  >
+                    {item.company ?? item.name}
+                    {item.clientId ? "" : " · house"}
+                  </Link>
+                ))}
+              </nav>
+            ) : null}
             <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-mute">
               {clock} PT · {counts.draft} draft · {counts.approved} approved · {counts.cued} cued
             </p>
           </div>
           <p className="mt-2 max-w-xl text-sm text-mute">
-            {desk.brand.name} · four-day pilot. Cued means cleared on this desk. Nothing posts to a network yet.
+            {desk.brand.name}
+            {board?.clientId ? " · client board. The client reviews it from their account." : " · house board."} Cued lines post at their
+            slot on the connected network.
           </p>
           <label className="mt-5 grid gap-2 text-sm" htmlFor="brief">
             Brief for the next cut
@@ -217,7 +318,7 @@ export function Desk({ initial }: { initial: DeskFile }) {
                                 {passed && post.status === "draft" ? " · passed" : ""}
                               </span>
                             </span>
-                            <StatusMark status={post.status} />
+                            <StatusMark status={post.status} publish={post.publishState} notes={post.notes.length} />
                           </button>
                         </li>
                       );
@@ -251,6 +352,35 @@ export function Desk({ initial }: { initial: DeskFile }) {
               </label>
               <Field label="Visual" id="visual" value={draft.visual} onChange={(visual) => setDraft({ ...draft, visual })} />
               <Field label="First reply" id="reply" value={draft.reply} onChange={(reply) => setDraft({ ...draft, reply })} />
+              <div className="grid gap-2 text-sm">
+                <span>Media</span>
+                {live?.mediaUrl ? (
+                  <div className="grid gap-2">
+                    {live.mediaType?.startsWith("video/") ? (
+                      <video src={live.mediaUrl} controls className="max-h-56 w-full border border-line bg-ink" />
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={live.mediaUrl} alt={draft.visual || "Post media"} className="max-h-56 w-full border border-line object-contain" />
+                    )}
+                    <button type="button" onClick={dropMedia} className="min-h-9 justify-self-start font-mono text-[11px] uppercase tracking-[0.14em] text-mute">
+                      Remove media
+                    </button>
+                  </div>
+                ) : null}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/webm"
+                  disabled={uploading}
+                  aria-label="Upload media for this line"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) void upload(file);
+                    event.target.value = "";
+                  }}
+                  className="text-xs text-mute file:mr-3 file:min-h-9 file:border file:border-line file:bg-ink file:px-2 file:font-mono file:text-[11px] file:uppercase file:text-paper"
+                />
+                {uploading ? <span className="text-xs text-mute">Uploading…</span> : null}
+              </div>
               <div className="flex flex-wrap gap-2">
                 <button
                   type="submit"
@@ -269,14 +399,67 @@ export function Desk({ initial }: { initial: DeskFile }) {
                   Draft
                 </button>
               </div>
+              {live ? (
+                <div className="grid gap-2 border-t border-line pt-4 text-sm">
+                  <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-mute">
+                    Network · {PUBLISH_LABEL[live.publishState]}
+                  </p>
+                  {live.publishedUrl ? (
+                    <a href={live.publishedUrl} target="_blank" rel="noreferrer" className="text-tape underline underline-offset-4">
+                      See it on {PLATFORM_NAME[live.platform]}
+                    </a>
+                  ) : null}
+                  {live.publishError ? <p className={live.publishState === "failed" ? "text-heat" : "text-mute"}>{live.publishError}</p> : null}
+                  {live.publishState !== "published" ? (
+                    <button
+                      type="button"
+                      onClick={publishNow}
+                      disabled={publishing || live.publishState === "publishing" || live.status === "draft"}
+                      className="min-h-10 justify-self-start border border-tape px-3 font-mono text-[11px] uppercase tracking-[0.14em] text-tape disabled:opacity-50"
+                    >
+                      {publishing ? "Publishing" : "Publish now"}
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
             </form>
           ) : (
             <p className="text-sm text-mute">Select a line on the board.</p>
           )}
+          {live && (live.notes.length > 0 || board?.clientId) ? (
+            <section aria-labelledby="notes" className="mt-6 border-t border-line pt-4">
+              <h3 id="notes" className="font-mono text-[11px] uppercase tracking-[0.16em] text-mute">
+                Review
+              </h3>
+              {live.notes.length ? (
+                <ul className="mt-2 grid gap-3">
+                  {live.notes.map((note) => (
+                    <li key={note.id} className="text-sm">
+                      <span className={`font-mono text-[11px] uppercase tracking-[0.12em] ${note.kind === "changes" ? "text-heat" : note.kind === "approved" ? "text-tape" : "text-mute"}`}>
+                        {note.authorName} · {NOTE_LABEL[note.kind]} · {formatSlot(note.at)}
+                      </span>
+                      {note.text ? <span className="mt-1 block whitespace-pre-wrap">{note.text}</span> : null}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-2 text-sm text-mute">No review yet.</p>
+              )}
+              <form onSubmit={sendReply} className="mt-3 grid gap-2">
+                <label className="grid gap-2 text-sm" htmlFor="reply-note">
+                  Note to the client
+                  <textarea id="reply-note" value={reply} onChange={(event) => setReply(event.target.value)} rows={2} className="border border-line bg-ink px-3 py-2 text-paper" />
+                </label>
+                <button type="submit" disabled={!reply.trim()} className="min-h-9 justify-self-start border border-line px-3 font-mono text-[11px] uppercase tracking-[0.14em] disabled:opacity-50">
+                  Send note
+                </button>
+              </form>
+            </section>
+          ) : null}
         </aside>
 
         <aside className="border-b border-line px-4 py-5 lg:col-start-1 lg:row-start-1 lg:border-r lg:px-5">
-          <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-tape">First campaign</p>
+          <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-tape">{board?.clientId ? "Client board" : "House board"}</p>
           <h2 className="mt-2 text-xl font-semibold leading-tight">{desk.brand.name}</h2>
           <p className="mt-1 font-mono text-[11px] text-mute">{desk.brand.handle}</p>
           <p className="mt-4 text-sm text-paper">{desk.brand.offers}</p>
@@ -302,14 +485,39 @@ export function Desk({ initial }: { initial: DeskFile }) {
               </button>
             </>
           )}
-          <dl className="mt-6 grid grid-cols-2 gap-2 font-mono text-[11px] uppercase tracking-[0.12em]">
-            {desk.brand.platforms.map((platform) => (
-              <div key={platform} className="border border-line px-2 py-2">
-                <dt className="text-mute">{MARK[platform]}</dt>
-                <dd>{PLATFORM_NAME[platform]}</dd>
-              </div>
-            ))}
-          </dl>
+          <div className="mt-6 border-t border-line pt-4">
+            <h3 className="font-mono text-[11px] uppercase tracking-[0.16em] text-mute">Networks</h3>
+            <ul className="mt-2 grid gap-2">
+              {PLATFORMS.filter((platform) => desk.brand.platforms.includes(platform) || desk.connections.some((c) => c.platform === platform)).map((platform) => {
+                const link = desk.connections.find((c) => c.platform === platform);
+                const can = desk.connectable.includes(platform);
+                return (
+                  <li key={platform} className="flex flex-wrap items-center justify-between gap-2 border border-line px-2 py-2 text-sm">
+                    <span>
+                      <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-mute">{MARK[platform]} </span>
+                      {link ? link.accountName : <span className="text-mute">{PLATFORM_NAME[platform]} · not connected</span>}
+                    </span>
+                    <span className="flex gap-2 font-mono text-[11px] uppercase tracking-[0.12em]">
+                      {can ? (
+                        <a href={`/api/social/${platform}/connect?board=${encodeURIComponent(brandId)}`} className="inline-flex min-h-9 items-center text-tape">
+                          {link ? "Reconnect" : "Connect"}
+                        </a>
+                      ) : link ? null : (
+                        <span className="inline-flex min-h-9 items-center text-mute" title="Set this network's app keys and LIFTPAGE_TOKEN_KEY">
+                          No app keys
+                        </span>
+                      )}
+                      {link ? (
+                        <button type="button" onClick={() => unplug(platform)} className="min-h-9 uppercase text-mute">
+                          Drop
+                        </button>
+                      ) : null}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
           <div className="mt-6 border-t border-line pt-4">
             <h3 className="font-mono text-[11px] uppercase tracking-[0.16em] text-mute">Last cut</h3>
             <p className="mt-2 text-sm">{desk.runs[0]?.note ?? "No cut yet."}</p>
@@ -361,13 +569,27 @@ function Field({
   );
 }
 
-function StatusMark({ status }: { status: Status }) {
-  const cued = status === "cued";
+const PUBLISH_LABEL: Record<Post["publishState"], string> = {
+  idle: "not sent",
+  scheduled: "scheduled for the slot",
+  publishing: "publishing",
+  published: "published",
+  failed: "failed",
+};
+
+const NOTE_LABEL = { approved: "approved", changes: "asked for changes", comment: "comment" } as const;
+
+function StatusMark({ status, publish, notes }: { status: Status; publish: Post["publishState"]; notes: number }) {
+  const label = publish === "published" ? "live" : publish === "failed" ? "failed" : status;
+  const strong = status === "cued" || publish === "published";
   return (
     <span
-      className={`inline-flex min-h-10 items-center px-2 font-mono text-[11px] uppercase tracking-[0.14em] ${cued ? "bg-tape text-ink" : "text-mute"}`}
+      className={`inline-flex min-h-10 items-center gap-1 px-2 font-mono text-[11px] uppercase tracking-[0.14em] ${
+        publish === "failed" ? "text-heat" : strong ? "bg-tape text-ink" : "text-mute"
+      }`}
     >
-      {status}
+      {label}
+      {notes ? <span aria-label={`${notes} review notes`}>· {notes}</span> : null}
     </span>
   );
 }

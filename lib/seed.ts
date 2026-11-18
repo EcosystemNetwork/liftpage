@@ -1,7 +1,9 @@
 import { nid } from "./id";
-import type { DeskFile, Post } from "./types";
+import type { Brand, Post, Run } from "./types";
 
-const posts: Post[] = [
+type SeedPost = Pick<Post, "id" | "platform" | "slot" | "hook" | "caption" | "visual" | "reply" | "status">;
+
+const posts: SeedPost[] = [
   {
     id: "p_d1_x",
     platform: "x",
@@ -133,7 +135,8 @@ const posts: Post[] = [
   },
 ];
 
-export function seedDesk(): DeskFile {
+/** The house board: the HarnessRouter Labs pilot. Written once, when the database has no boards. */
+export function seedDesk(): { brand: Brand; posts: SeedPost[]; runs: Run[] } {
   return {
     brand: {
       id: "brand_harnessrouter",
@@ -157,6 +160,5 @@ export function seedDesk(): DeskFile {
         postIds: posts.map((post) => post.id),
       },
     ],
-    holds: [],
   };
 }
