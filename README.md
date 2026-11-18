@@ -32,7 +32,7 @@ Every service but Supabase is optional. Without its keys the feature says so and
 ## Set up
 
 1. Make a Supabase project. Run `supabase/migrations/*.sql` in order in the SQL editor (or `supabase db push`).
-2. Copy `.env.example` to `.env.local`. Fill the Supabase URL and keys, `NEXT_PUBLIC_SITE_URL`, and `LIFTPAGE_ADMIN_EMAIL` / `LIFTPAGE_ADMIN_PASSWORD`. The owner account is made from those on first start.
+2. Copy `.env.example` to `.env.local`. Fill the Supabase URL and keys, `NEXT_PUBLIC_SITE_URL`, and `LIFTPAGE_ADMIN_PASSWORD`. Admin is locked to the owner emails in `lib/owner.ts`; the owner account is made with that password on first start.
 3. In Supabase Auth > URL Configuration, set the site URL and allow `<site>/auth/confirm`. If Supabase sends its own emails (no Resend), set the confirm-signup and reset templates to link to `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email&next=/account` (use `type=recovery&next=/auth/password` for reset).
 4. `npm run dev`. For scheduled publishing, also run `npx inngest-cli@latest dev -u http://localhost:3070/api/inngest` with `INNGEST_DEV=1`.
 5. For each network, make the developer app, register `<site>/api/social/<platform>/callback`, set its keys and `LIFTPAGE_TOKEN_KEY`, then Connect it from a board on the desk.
@@ -42,7 +42,8 @@ Network apps need review before they post publicly. TikTok posts are private (`S
 ## Accounts and boards
 
 - `/login`, `/signup`, `/forgot`: sign-in, client self sign-up (`LIFTPAGE_OPEN_SIGNUP=false` closes it), password reset.
-- `/account`: a client's messages with LiftPage, their board (approve a draft, request changes with a note, comment), their requests with a deposit button, and their weekly numbers with ranges, CSV import/export, and Sync now.
+- `/account` opens on **Your projects**: each website (live address, uptime, Check now) and social project (drafts to review, scheduled, published, networks), with Request a change on every card and its status (Received → In progress → Done). Under them sits the monthly plan: price, what it includes, and its terms. The plan is either a free first month (the card goes on file at Start free month and the first charge lands when the month ends) or a locked price held through a date. Admins set projects and the plan under Projects and plan on `/admin/customers/[id]`. An hourly job checks every live site and emails LiftPage when one goes down or comes back. Stripe's webhook needs `customer.subscription.updated` and `customer.subscription.deleted` added to keep plan status in step.
+- Also on `/account`: a client's messages with LiftPage, their board (approve a draft, request changes with a note, comment), their requests with a deposit button, and their weekly numbers with ranges, CSV import/export, and Sync now.
 - `/admin`: clients, pipeline, won and paid value, requests.
 - `/admin/messages`: every client thread, newest first, with unread counts. Open one to reply.
 - `/admin/users`: invite accounts by email, switch accounts off, send reset links, change roles.

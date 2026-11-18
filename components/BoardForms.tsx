@@ -21,11 +21,11 @@ export function ReviewPost({ postId, status, locked }: { postId: string; status:
           </form>
         ) : null}
         {!locked ? (
-          <button type="button" onClick={() => setMode(mode === "changes" ? null : "changes")} className="min-h-9 border border-line px-2 font-mono text-[11px] uppercase tracking-[0.12em]">
+          <button type="button" onClick={() => setMode(mode === "changes" ? null : "changes")} className="btn-ghost btn-sm">
             Request changes
           </button>
         ) : null}
-        <button type="button" onClick={() => setMode(mode === "comment" ? null : "comment")} className="min-h-9 border border-line px-2 font-mono text-[11px] uppercase tracking-[0.12em]">
+        <button type="button" onClick={() => setMode(mode === "comment" ? null : "comment")} className="btn-ghost btn-sm">
           Comment
         </button>
       </div>
@@ -35,7 +35,7 @@ export function ReviewPost({ postId, status, locked }: { postId: string; status:
           <input type="hidden" name="kind" value={mode} />
           <label className={LABEL}>
             {mode === "changes" ? "What should change?" : "Comment"}
-            <textarea name="text" required rows={3} maxLength={1000} className="border border-line bg-ink px-3 py-2 text-paper" />
+            <textarea name="text" required rows={3} maxLength={1000} className="field py-2.5" />
           </label>
           <Submit busy="Sending" className="justify-self-start">
             {mode === "changes" ? "Send back" : "Post comment"}
@@ -64,11 +64,11 @@ export function OpenBoardForm({ clientId, company }: { clientId: string; company
       </div>
       <label className={LABEL}>
         Voice
-        <textarea name="voice" defaultValue={state?.fields?.voice} required rows={3} className="border border-line bg-ink px-3 py-2 text-paper" />
+        <textarea name="voice" defaultValue={state?.fields?.voice} required rows={3} className="field py-2.5" />
       </label>
       <label className={LABEL}>
         Offer
-        <textarea name="offers" defaultValue={state?.fields?.offers} required rows={2} className="border border-line bg-ink px-3 py-2 text-paper" />
+        <textarea name="offers" defaultValue={state?.fields?.offers} required rows={2} className="field py-2.5" />
       </label>
       <fieldset className="grid gap-2 text-sm">
         <legend className="mb-2">Platforms</legend>

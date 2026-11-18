@@ -11,14 +11,14 @@ export default function ForgotPage() {
       <Header />
       <main id="main" className="px-4 py-10 md:px-8">
         <div className="mx-auto max-w-md">
-          <p className={`${KICKER} text-tape`}>Reset</p>
-          <h1 className="mt-3 text-4xl font-semibold tracking-tight">Forgot it.</h1>
-          <p className="mt-3 text-mute">We&rsquo;ll email a link that lets you set a new one.</p>
+          <p className={`${KICKER} text-accent`}>Reset</p>
+          <h1 className="mt-3 display text-5xl md:text-6xl">Forgot it.</h1>
+          <p className="mt-3 text-muted">We&rsquo;ll email a link that lets you set a new one.</p>
           <div className="mt-8">
             <ForgotForm />
           </div>
-          <p className="mt-8 text-sm text-mute">
-            <Link href="/login" className="text-tape underline underline-offset-4">
+          <p className="mt-8 text-sm text-muted">
+            <Link href="/login" className="link">
               Back to sign in
             </Link>
           </p>

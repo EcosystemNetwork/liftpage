@@ -9,7 +9,7 @@ export function Submit({ children, busy, className = "" }: { children: React.Rea
     <button
       type="submit"
       disabled={pending}
-      className={`min-h-10 bg-tape px-4 font-mono text-xs uppercase tracking-[0.14em] text-ink disabled:opacity-60 ${className}`}
+      className={`btn-primary disabled:opacity-60 ${className}`}
     >
       {pending ? busy || "Working" : children}
     </button>
@@ -23,9 +23,7 @@ export function RowButton({ children, tone = "plain" }: { children: React.ReactN
     <button
       type="submit"
       disabled={pending}
-      className={`min-h-9 border px-2 font-mono text-[11px] uppercase tracking-[0.12em] disabled:opacity-60 ${
-        tone === "heat" ? "border-heat text-heat" : "border-line text-paper"
-      }`}
+      className={`${tone === "heat" ? "btn-danger" : "btn-ghost"} btn-sm`}
     >
       {children}
     </button>
@@ -35,13 +33,13 @@ export function RowButton({ children, tone = "plain" }: { children: React.ReactN
 export function Message({ state }: { state: { error?: string; ok?: string } | undefined }) {
   if (state?.error)
     return (
-      <p role="alert" className="text-sm text-heat">
+      <p role="alert" className="rounded-xl bg-danger-soft px-4 py-3 text-sm text-danger">
         {state.error}
       </p>
     );
   if (state?.ok)
     return (
-      <p role="status" className="border border-tape px-3 py-2 text-sm text-paper">
+      <p role="status" className="rounded-xl border border-accent/40 bg-accent-soft px-4 py-3 text-sm text-ink">
         {state.ok}
       </p>
     );

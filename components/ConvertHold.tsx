@@ -8,7 +8,7 @@ import { Message, RowButton } from "./forms";
 export function ConvertHold({ holdId, linked }: { holdId: string; linked: boolean }) {
   const [state, action] = useActionState(accountFromHold, undefined);
   if (state?.ok) return <Message state={state} />;
-  if (linked) return <span className="text-mute">Linked</span>;
+  if (linked) return <span className="text-muted">Linked</span>;
   return (
     <form action={action} className="grid gap-2">
       <input type="hidden" name="holdId" value={holdId} />

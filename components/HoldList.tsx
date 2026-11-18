@@ -13,9 +13,9 @@ const STATUS_LABEL = { requested: "Requested", contacted: "Contacted", won: "Won
 /** Requests. Admins get status controls and account creation; clients just read. */
 export function HoldList({ holds, admin = false }: { holds: Hold[]; admin?: boolean }) {
   return (
-    <div className="overflow-x-auto border border-line">
+    <div className="overflow-x-auto panel">
       <table className="w-full min-w-[40rem] text-sm">
-        <thead className={`${KICKER} text-mute`}>
+        <thead className={`${KICKER} text-muted`}>
           <tr className="border-b border-line text-left">
             <th className="px-3 py-2 font-normal">When</th>
             {admin ? <th className="px-3 py-2 font-normal">Who</th> : null}
@@ -28,21 +28,21 @@ export function HoldList({ holds, admin = false }: { holds: Hold[]; admin?: bool
         <tbody>
           {holds.map((hold) => (
             <tr key={hold.id} className="border-b border-line align-top last:border-0">
-              <td className="px-3 py-2 font-mono text-mute">
+              <td className="px-3 py-2 font-mono text-muted">
                 {new Date(hold.at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
               </td>
               {admin ? (
                 <td className="px-3 py-2">
                   <span className="block">{hold.name}</span>
-                  <span className="block text-mute">{hold.company}</span>
-                  <span className="block font-mono text-xs text-mute">{hold.email}</span>
+                  <span className="block text-muted">{hold.company}</span>
+                  <span className="block font-mono text-xs text-muted">{hold.email}</span>
                 </td>
               ) : null}
               <td className="px-3 py-2">{PACKAGES[hold.packageId].name}</td>
               <td className="px-3 py-2 text-right font-mono">
                 {fmt.money(hold.amount)}
                 {hold.paidAt ? (
-                  <span className="block text-xs text-tape">
+                  <span className="block text-xs text-accent">
                     paid {fmt.money(hold.amountPaid ?? hold.amount)} ·{" "}
                     {new Date(hold.paidAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                   </span>
@@ -61,7 +61,7 @@ export function HoldList({ holds, admin = false }: { holds: Hold[]; admin?: bool
                       name="status"
                       defaultValue={hold.status}
                       aria-label={`Status for ${hold.company}`}
-                      className="min-h-9 border border-line bg-ink px-2 font-mono text-xs"
+                      className="field min-h-9 w-auto font-mono text-xs"
                     >
                       {HOLD_STATUSES.map((status) => (
                         <option key={status} value={status}>
@@ -72,7 +72,7 @@ export function HoldList({ holds, admin = false }: { holds: Hold[]; admin?: bool
                     <RowButton>Set</RowButton>
                   </form>
                 ) : (
-                  <span className={`font-mono text-xs uppercase ${hold.status === "won" ? "text-tape" : "text-mute"}`}>
+                  <span className={`font-mono text-xs uppercase ${hold.status === "won" ? "text-accent" : "text-muted"}`}>
                     {STATUS_LABEL[hold.status]}
                   </span>
                 )}

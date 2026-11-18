@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { setDisabled, setRole } from "@/app/actions/admin";
+import { setDisabled } from "@/app/actions/admin";
 import { RowButton } from "@/components/forms";
 import { CreateUserForm, ResetPassword } from "@/components/UserForms";
 import { loadAccounts, signupOpen } from "@/lib/accounts";
@@ -20,28 +20,28 @@ export default async function UsersPage() {
   return (
     <>
       <section>
-        <p className={`${KICKER} text-tape`}>Users</p>
-        <h1 className="mt-3 text-4xl font-semibold tracking-tight">Who gets in.</h1>
-        <p className="mt-3 text-mute">
-          Self sign-up is {signupOpen() ? "open: anyone can make a client account" : "closed"}. Set{" "}
+        <p className={`${KICKER} text-accent`}>Users</p>
+        <h1 className="mt-3 display text-5xl md:text-6xl">Who gets in.</h1>
+        <p className="mt-3 text-muted">
+          Admin is locked to the owner account; everyone else is a client. Self sign-up is {signupOpen() ? "open: anyone can make a client account" : "closed"}. Set{" "}
           <code className="font-mono text-sm">LIFTPAGE_OPEN_SIGNUP</code> to change it.
         </p>
       </section>
 
       <section aria-labelledby="add" className="max-w-2xl">
-        <h2 id="add" className="mb-4 text-2xl font-semibold">
-          Add an account
+        <h2 id="add" className="display mb-4 text-3xl">
+          Add a client
         </h2>
         <CreateUserForm />
       </section>
 
       <section aria-labelledby="everyone">
-        <h2 id="everyone" className="mb-4 text-2xl font-semibold">
+        <h2 id="everyone" className="display mb-4 text-3xl">
           Everyone
         </h2>
-        <div className="overflow-x-auto border border-line">
+        <div className="overflow-x-auto panel">
           <table className="w-full min-w-[52rem] text-sm">
-            <thead className={`${KICKER} text-mute`}>
+            <thead className={`${KICKER} text-muted`}>
               <tr className="border-b border-line text-left">
                 <th className="px-3 py-2 font-normal">Account</th>
                 <th className="px-3 py-2 font-normal">Role</th>
@@ -54,37 +54,32 @@ export default async function UsersPage() {
               {sorted.map((user) => {
                 const self = user.id === me.id;
                 return (
-                  <tr key={user.id} className={`border-b border-line align-top last:border-0 ${user.disabled ? "text-mute" : ""}`}>
+                  <tr key={user.id} className={`border-b border-line align-top last:border-0 ${user.disabled ? "text-muted" : ""}`}>
                     <td className="px-3 py-2">
                       {user.role === "client" ? (
-                        <Link href={`/admin/customers/${user.id}`} className="text-tape underline underline-offset-4">
+                        <Link href={`/admin/customers/${user.id}`} className="link">
                           {user.company}
                         </Link>
                       ) : (
                         <span>{user.company}</span>
                       )}
                       <span className="block">{user.name}</span>
-                      <span className="block font-mono text-xs text-mute">{user.email}</span>
+                      <span className="block font-mono text-xs text-muted">{user.email}</span>
                     </td>
                     <td className="px-3 py-2 font-mono text-xs uppercase">
                       {user.role}
-                      {user.disabled ? <span className="block text-heat">off</span> : null}
-                      {self ? <span className="block text-mute">you</span> : null}
+                      {user.disabled ? <span className="block text-danger">off</span> : null}
+                      {self ? <span className="block text-muted">you</span> : null}
                     </td>
-                    <td className="px-3 py-2 font-mono text-mute">{day(user.createdAt)}</td>
-                    <td className="px-3 py-2 font-mono text-mute">{day(user.lastLoginAt)}</td>
+                    <td className="px-3 py-2 font-mono text-muted">{day(user.createdAt)}</td>
+                    <td className="px-3 py-2 font-mono text-muted">{day(user.lastLoginAt)}</td>
                     <td className="px-3 py-2">
                       {self ? (
-                        <Link href="/account" className="text-mute underline underline-offset-4">
+                        <Link href="/account" className="text-muted underline underline-offset-4">
                           Change your password
                         </Link>
                       ) : (
                         <div className="flex flex-wrap items-start gap-2">
-                          <form action={setRole}>
-                            <input type="hidden" name="userId" value={user.id} />
-                            <input type="hidden" name="role" value={user.role === "admin" ? "client" : "admin"} />
-                            <RowButton>{user.role === "admin" ? "Make client" : "Make admin"}</RowButton>
-                          </form>
                           <form action={setDisabled}>
                             <input type="hidden" name="userId" value={user.id} />
                             <input type="hidden" name="disabled" value={user.disabled ? "false" : "true"} />

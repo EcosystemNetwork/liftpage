@@ -21,14 +21,14 @@ export function WeeklyBars({ weeks, field, title }: { weeks: WeekTotals[]; field
 
   return (
     <figure className="border border-line p-3">
-      <figcaption className="mb-2 font-mono text-[11px] uppercase tracking-[0.14em] text-mute">{title} by week</figcaption>
+      <figcaption className="mb-2 eyebrow text-muted">{title} by week</figcaption>
       <svg viewBox={`0 0 ${W} ${H}`} className="block h-auto w-full" role="img" aria-label={`${title} by week`}>
         {ticks.map((tick) => {
           const y = PAD.top + plotH - (tick / top) * plotH;
           return (
             <g key={tick}>
               <line x1={PAD.left} x2={W - PAD.right} y1={y} y2={y} stroke="var(--line)" strokeWidth={1} />
-              <text x={PAD.left - 6} y={y + 4} textAnchor="end" fontSize={11} fill="var(--mute)" fontFamily="var(--font-mono-face)">
+              <text x={PAD.left - 6} y={y + 4} textAnchor="end" fontSize={11} fill="var(--muted)" fontFamily="var(--font-mono-face)">
                 {fmt.compact(tick)}
               </text>
             </g>
@@ -43,9 +43,9 @@ export function WeeklyBars({ weeks, field, title }: { weeks: WeekTotals[]; field
           return (
             <g key={row.week} className="group">
               <rect x={PAD.left + i * slot} y={PAD.top} width={slot} height={plotH} fill="transparent" />
-              <path d={topRounded(x, y, barW, h, r)} fill="var(--tape)" className="opacity-85 group-hover:opacity-100" />
+              <path d={topRounded(x, y, barW, h, r)} fill="var(--accent)" className="opacity-85 group-hover:opacity-100" />
               {(rows.length - 1 - i) % step === 0 ? (
-                <text x={x + barW / 2} y={H - 6} textAnchor="middle" fontSize={11} fill="var(--mute)" fontFamily="var(--font-mono-face)">
+                <text x={x + barW / 2} y={H - 6} textAnchor="middle" fontSize={11} fill="var(--muted)" fontFamily="var(--font-mono-face)">
                   {fmt.week(row.week)}
                 </text>
               ) : null}
@@ -55,7 +55,7 @@ export function WeeklyBars({ weeks, field, title }: { weeks: WeekTotals[]; field
                   y={Math.max(0, y - 30)}
                   width={100}
                   height={24}
-                  fill="var(--panel)"
+                  fill="var(--card)"
                   stroke="var(--line)"
                 />
                 <text
@@ -63,7 +63,7 @@ export function WeeklyBars({ weeks, field, title }: { weeks: WeekTotals[]; field
                   y={Math.max(0, y - 30) + 16}
                   textAnchor="middle"
                   fontSize={11}
-                  fill="var(--paper)"
+                  fill="var(--ink)"
                   fontFamily="var(--font-mono-face)"
                 >
                   {fmt.week(row.week)} · {fmt.compact(value)}
@@ -73,7 +73,7 @@ export function WeeklyBars({ weeks, field, title }: { weeks: WeekTotals[]; field
             </g>
           );
         })}
-        <line x1={PAD.left} x2={W - PAD.right} y1={PAD.top + plotH} y2={PAD.top + plotH} stroke="var(--mute)" strokeWidth={1} />
+        <line x1={PAD.left} x2={W - PAD.right} y1={PAD.top + plotH} y2={PAD.top + plotH} stroke="var(--muted)" strokeWidth={1} />
       </svg>
     </figure>
   );

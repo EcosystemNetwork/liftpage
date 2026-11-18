@@ -22,17 +22,10 @@ export function CreateUserForm() {
           Email
           <input name="email" type="email" required defaultValue={state?.fields?.email} className={INPUT} />
         </label>
-        <label className={LABEL}>
-          Role
-          <select name="role" defaultValue={state?.fields?.role ?? "client"} className={INPUT}>
-            <option value="client">Client</option>
-            <option value="admin">Admin</option>
-          </select>
-        </label>
       </div>
       <Message state={state} />
       <Submit busy="Making" className="justify-self-start">
-        Make account
+        Make client account
       </Submit>
     </form>
   );

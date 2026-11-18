@@ -1,6 +1,8 @@
 import type Stripe from "stripe";
 import { track } from "@/lib/analytics";
 import { notifyAddress, sendMail } from "@/lib/email";
+import { fromStripeStatus } from "@/lib/plan";
+import { planBySubscription, recordSubscription } from "@/lib/projects";
 import { siteUrl } from "@/lib/site";
 import { fromMinor, stripe, toMinor, webhookReady } from "@/lib/stripe";
 import { db, must } from "@/lib/supabase/server";
@@ -35,6 +37,10 @@ export async function POST(request: Request) {
       case "checkout.session.completed":
       case "checkout.session.async_payment_succeeded": {
         const session = event.data.object as Stripe.Checkout.Session;
+        if (session.mode === "subscription") {
+          await planStarted(session);
+          break;
+        }
         holdId = session.metadata?.holdId ?? session.client_reference_id ?? null;
         if (session.payment_status === "paid" && holdId) await markPaid(holdId, session);
         break;
@@ -52,6 +58,13 @@ export async function POST(request: Request) {
             idempotencyKey: `pay-failed:${session.id}`,
           });
         }
+        break;
+      }
+      case "customer.subscription.updated":
+      case "customer.subscription.deleted": {
+        const sub = event.data.object as Stripe.Subscription;
+        const clientId = (await planBySubscription(sub.id)) ?? sub.metadata?.clientId ?? null;
+        if (clientId) await recordSubscription(clientId, { status: event.type === "customer.subscription.deleted" ? "canceled" : fromStripeStatus(sub.status) });
         break;
       }
       default:
@@ -74,7 +87,29 @@ export async function POST(request: Request) {
   return Response.json({ received: true });
 }
 
-type HoldRow = { id: string; email: string; name: string; company: string; package_id: PackageId; amount: number; paid_at: string | null; stripe_session_id: string | null };
+/** A client finished checkout for their monthly plan. The client id was set by our server. */
+async function planStarted(session: Stripe.Checkout.Session) {
+  const clientId = session.metadata?.clientId;
+  const subscriptionId = typeof session.subscription === "string" ? session.subscription : session.subscription?.id;
+  if (!clientId || !subscriptionId) return;
+  const sub = await stripe().subscriptions.retrieve(subscriptionId);
+  const customerId = typeof session.customer === "string" ? session.customer : (session.customer?.id ?? null);
+  const found = await recordSubscription(clientId, { status: fromStripeStatus(sub.status), customerId, subscriptionId });
+  if (!found) throw new Error(`no plan for client ${clientId} (subscription ${subscriptionId})`);
+  await track(clientId, "plan_started", { status: sub.status });
+  const to = notifyAddress();
+  if (to) {
+    await sendMail({
+      to,
+      subject: `Plan started: ${session.customer_details?.email ?? clientId}`,
+      lines: [`A client put a card on file for their monthly plan. Stripe status: ${sub.status}.`],
+      action: { label: "Open the customer", url: `${siteUrl()}/admin/customers/${clientId}#plan` },
+      idempotencyKey: `plan-started:${session.id}`,
+    });
+  }
+}
+
+type HoldRow ={ id: string; email: string; name: string; company: string; package_id: PackageId; amount: number; paid_at: string | null; stripe_session_id: string | null };
 
 async function markPaid(holdId: string, session: Stripe.Checkout.Session) {
   const paid = fromMinor(session.amount_total);

@@ -43,7 +43,7 @@ export function MetricForm({ userId, today }: { userId?: string; today: string }
           </label>
         ))}
       </div>
-      <p className="text-xs text-mute">Any date in the week works; it files under that Monday. Same week and platform overwrites.</p>
+      <p className="text-xs text-muted">Any date in the week works; it files under that Monday. Same week and platform overwrites.</p>
       <Message state={state} />
       <Submit busy="Saving" className="justify-self-start">
         Save week
@@ -61,7 +61,7 @@ export function ImportForm({ userId }: { userId?: string }) {
         CSV file
         <input name="file" type="file" accept=".csv,text/csv" required className={`${INPUT} py-2`} />
       </label>
-      <p className="text-xs text-mute">
+      <p className="text-xs text-muted">
         Columns: <code className="font-mono">week, platform, followers, impressions, engagements, clicks, leads</code>. Blank cells keep what&rsquo;s
         there. An export from this page imports back.
       </p>

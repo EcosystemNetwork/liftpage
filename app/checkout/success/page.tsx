@@ -32,32 +32,32 @@ export default async function CheckoutSuccess({ searchParams }: PageProps<"/chec
       <Header />
       <main id="main" className="px-4 py-10 md:px-8">
         <div className="mx-auto max-w-xl">
-          <p className={`${KICKER} text-tape`}>Checkout</p>
+          <p className={`${KICKER} text-accent`}>Checkout</p>
           {state === "paid" ? (
             <>
-              <h1 className="mt-3 text-4xl font-semibold tracking-tight">Paid. Thank you.</h1>
-              <p className="mt-4 text-mute">
+              <h1 className="mt-3 display text-5xl md:text-6xl">Paid. Thank you.</h1>
+              <p className="mt-4 text-muted">
                 {product ? `${product} · ` : ""}
-                <span className="font-mono text-paper">${amount.toLocaleString("en-US")}</span>. A receipt is on its way to your inbox.
+                <span className="font-mono text-ink">${amount.toLocaleString("en-US")}</span>. A receipt is on its way to your inbox.
                 We&rsquo;ll reach out about the first board.
               </p>
             </>
           ) : state === "pending" ? (
             <>
-              <h1 className="mt-3 text-4xl font-semibold tracking-tight">Payment is processing.</h1>
-              <p className="mt-4 text-mute">Some payment methods take a little while to clear. We&rsquo;ll email you when it does.</p>
+              <h1 className="mt-3 display text-5xl md:text-6xl">Payment is processing.</h1>
+              <p className="mt-4 text-muted">Some payment methods take a little while to clear. We&rsquo;ll email you when it does.</p>
             </>
           ) : (
             <>
-              <h1 className="mt-3 text-4xl font-semibold tracking-tight">We couldn&rsquo;t confirm that payment.</h1>
-              <p className="mt-4 text-mute">If you were charged, the receipt from Stripe is the record. Reply to it and we&rsquo;ll sort it out.</p>
+              <h1 className="mt-3 display text-5xl md:text-6xl">We couldn&rsquo;t confirm that payment.</h1>
+              <p className="mt-4 text-muted">If you were charged, the receipt from Stripe is the record. Reply to it and we&rsquo;ll sort it out.</p>
             </>
           )}
           <p className="mt-8 flex flex-wrap gap-4 text-sm">
-            <Link href="/account" className="text-tape underline underline-offset-4">
+            <Link href="/account" className="link">
               Your account
             </Link>
-            <Link href="/" className="text-mute underline underline-offset-4">
+            <Link href="/" className="text-muted underline underline-offset-4">
               Home
             </Link>
           </p>

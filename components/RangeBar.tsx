@@ -15,14 +15,14 @@ export function RangeBar({ path, range, exportHref }: { path: string; range: Ran
               href={`${path}?range=${key}`}
               scroll={false}
               aria-current={on ? "true" : undefined}
-              className={`inline-flex min-h-9 items-center border px-2 ${on ? "border-tape bg-tape text-ink" : "border-line text-paper"}`}
+              className={`inline-flex min-h-9 items-center rounded-full border px-3 text-xs transition-colors ${on ? "border-ink bg-ink text-canvas" : "border-line text-ink hover:border-ink"}`}
             >
               {label}
             </Link>
           );
         })}
       </nav>
-      <a href={exportHref} className="inline-flex min-h-9 items-center border border-line px-2 text-paper" download>
+      <a href={exportHref} className="inline-flex min-h-9 items-center border border-line px-2 text-ink" download>
         Export CSV
       </a>
     </div>

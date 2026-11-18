@@ -47,7 +47,7 @@ export function SignupForm() {
       <label className={LABEL}>
         Password
         <input name="password" type="password" autoComplete="new-password" minLength={10} required className={INPUT} />
-        <span className="text-xs text-mute">Ten characters or more.</span>
+        <span className="text-xs text-muted">Ten characters or more.</span>
       </label>
       <Message state={state} />
       <Submit busy="Creating" className="justify-self-start">
@@ -84,7 +84,7 @@ export function SetPasswordForm() {
       <label className={LABEL}>
         New password
         <input name="password" type="password" autoComplete="new-password" minLength={10} required className={INPUT} />
-        <span className="text-xs text-mute">Ten characters or more.</span>
+        <span className="text-xs text-muted">Ten characters or more.</span>
       </label>
       <Message state={state} />
       <Submit busy="Saving" className="justify-self-start">

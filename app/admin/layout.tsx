@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { Header } from "@/components/Header";
-import { KICKER } from "@/lib/ui";
 
 const TABS = [
   ["/admin", "Overview"],
   ["/admin/messages", "Messages"],
+  ["/admin/tools", "Tools"],
+  ["/admin/activity", "Activity"],
   ["/admin/users", "Users"],
   ["/admin/setup", "Setup"],
   ["/desk", "Desk"],
@@ -16,9 +17,9 @@ export default function AdminLayout({ children }: LayoutProps<"/admin">) {
     <>
       <Header />
       <div className="border-b border-line">
-        <nav aria-label="Admin" className={`mx-auto flex max-w-6xl gap-1 px-4 md:px-8 ${KICKER}`}>
+        <nav aria-label="Admin" className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-4 py-1.5 text-sm md:px-8">
           {TABS.map(([href, label]) => (
-            <Link key={href} href={href} className="inline-flex min-h-10 items-center px-2 text-mute hover:text-paper">
+            <Link key={href} href={href} className="inline-flex min-h-10 items-center rounded-full px-3 text-muted transition-colors hover:bg-sunken hover:text-ink">
               {label}
             </Link>
           ))}

@@ -13,9 +13,9 @@ import { WeeklyBars } from "./WeeklyBars";
 export function Tile({ label, value, delta, note }: { label: string; value: string; delta?: number | null; note?: string }) {
   return (
     <div className="border border-line p-4">
-      <p className={`${KICKER} text-mute`}>{label}</p>
-      <p className="mt-2 font-mono text-3xl text-paper">{value}</p>
-      <p className="mt-1 font-mono text-xs text-mute">
+      <p className={`${KICKER} text-muted`}>{label}</p>
+      <p className="mt-2 font-mono text-3xl text-ink">{value}</p>
+      <p className="mt-1 font-mono text-xs text-muted">
         {delta === undefined ? note ?? " " : delta === null ? "no prior week" : `${fmt.delta(delta)} vs prior week`}
       </p>
     </div>
@@ -34,7 +34,7 @@ export function CustomerStats({ metrics: all, canDelete, userId }: { metrics: Me
   const bar = <RangeBar path={path} range={range} exportHref={exportHref} />;
   const importer = (
     <details className="border border-line p-4">
-      <summary className="cursor-pointer font-mono text-[11px] uppercase tracking-[0.14em] text-paper">Import weeks from a CSV</summary>
+      <summary className="cursor-pointer eyebrow text-ink">Import weeks from a CSV</summary>
       <div className="mt-4 max-w-2xl">
         <ImportForm userId={userId} />
       </div>
@@ -43,7 +43,7 @@ export function CustomerStats({ metrics: all, canDelete, userId }: { metrics: Me
   if (all.length === 0) {
     return (
       <div className="grid gap-6">
-        <p className="border border-line px-4 py-6 text-mute">No numbers yet. Import a CSV, or log the first week below.</p>
+        <p className="panel px-5 py-6 text-muted">No numbers yet. Import a CSV, or log the first week below.</p>
         {importer}
       </div>
     );
@@ -54,7 +54,7 @@ export function CustomerStats({ metrics: all, canDelete, userId }: { metrics: Me
     return (
       <div className="grid gap-6">
         {bar}
-        <p className="border border-line px-4 py-6 text-mute">Nothing logged in this range. Pick a longer one.</p>
+        <p className="panel px-5 py-6 text-muted">Nothing logged in this range. Pick a longer one.</p>
       </div>
     );
   }
@@ -64,7 +64,7 @@ export function CustomerStats({ metrics: all, canDelete, userId }: { metrics: Me
   return (
     <div className="grid gap-6 [&>*]:min-w-0">
       {bar}
-      <p className="font-mono text-xs text-mute">Latest week: {fmt.week(latest.week)}, all platforms</p>
+      <p className="font-mono text-xs text-muted">Latest week: {fmt.week(latest.week)}, all platforms</p>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <Tile label="Followers" value={fmt.compact(latest.followers)} delta={change(latest.followers, previous?.followers)} />
         <Tile label="Impressions" value={fmt.compact(latest.impressions)} delta={change(latest.impressions, previous?.impressions)} />
@@ -82,28 +82,28 @@ export function CustomerStats({ metrics: all, canDelete, userId }: { metrics: Me
 
       {s.platforms.length > 1 ? (
         <div className="border border-line p-4">
-          <p className={`${KICKER} text-mute`}>Impressions by platform, {fmt.week(latest.week)}</p>
+          <p className={`${KICKER} text-muted`}>Impressions by platform, {fmt.week(latest.week)}</p>
           <ul className="mt-3 grid gap-2">
             {s.platforms.map((row) => (
               <li key={row.platform} className="grid grid-cols-[6rem_minmax(0,1fr)_5rem] items-center gap-3 text-sm">
                 <span>{PLATFORM_NAME[row.platform]}</span>
                 <span className="h-2 bg-line">
                   <span
-                    className="block h-2 rounded-r bg-tape"
+                    className="block h-2 rounded-full bg-accent"
                     style={{ width: `${latest.impressions ? (row.impressions / latest.impressions) * 100 : 0}%` }}
                   />
                 </span>
-                <span className="text-right font-mono text-mute">{fmt.compact(row.impressions)}</span>
+                <span className="text-right font-mono text-muted">{fmt.compact(row.impressions)}</span>
               </li>
             ))}
           </ul>
         </div>
       ) : null}
 
-      <div className="overflow-x-auto border border-line">
+      <div className="overflow-x-auto panel">
         <table className="w-full min-w-[48rem] text-sm">
           <caption className="sr-only">Every logged week</caption>
-          <thead className={`${KICKER} text-mute`}>
+          <thead className={`${KICKER} text-muted`}>
             <tr className="border-b border-line text-left">
               <th className="px-3 py-2 font-normal">Week</th>
               <th className="px-3 py-2 font-normal">Platform</th>
@@ -126,7 +126,7 @@ export function CustomerStats({ metrics: all, canDelete, userId }: { metrics: Me
                 <td className="px-3 py-2 text-right">{fmt.whole(m.engagements)}</td>
                 <td className="px-3 py-2 text-right">{fmt.whole(m.clicks)}</td>
                 <td className="px-3 py-2 text-right">{fmt.whole(m.leads)}</td>
-                <td className="px-3 py-2 text-xs text-mute">{m.source ?? "manual"}</td>
+                <td className="px-3 py-2 text-xs text-muted">{m.source ?? "manual"}</td>
                 {canDelete ? (
                   <td className="px-3 py-1 text-right">
                     <form action={deleteMetric}>

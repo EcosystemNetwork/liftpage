@@ -38,12 +38,12 @@ export function PayButton({ holdId, label = "Pay now", className = "" }: { holdI
         type="button"
         onClick={pay}
         disabled={busy}
-        className={`min-h-10 bg-tape px-4 font-mono text-xs uppercase tracking-[0.14em] text-ink disabled:opacity-60 ${className}`}
+        className={`btn-primary disabled:opacity-60 ${className}`}
       >
         {busy ? "Opening checkout" : label}
       </button>
       {error ? (
-        <span role="alert" className="text-sm text-heat">
+        <span role="alert" className="text-sm text-danger">
           {error}
         </span>
       ) : null}

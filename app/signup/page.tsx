@@ -16,21 +16,21 @@ export default async function SignupPage() {
       <Header />
       <main id="main" className="px-4 py-10 md:px-8">
         <div className="mx-auto max-w-md">
-          <p className={`${KICKER} text-tape`}>Client account</p>
-          <h1 className="mt-3 text-4xl font-semibold tracking-tight">Track the lift.</h1>
+          <p className={`${KICKER} text-accent`}>Client account</p>
+          <h1 className="mt-3 display text-5xl md:text-6xl">Track the lift.</h1>
           {signupOpen() ? (
             <>
-              <p className="mt-3 text-mute">Your requests and your weekly numbers, in one place.</p>
+              <p className="mt-3 text-muted">Your requests and your weekly numbers, in one place.</p>
               <div className="mt-8">
                 <SignupForm />
               </div>
             </>
           ) : (
-            <p className="mt-6 text-mute">Sign-up is closed. LiftPage sets up accounts for clients.</p>
+            <p className="mt-6 text-muted">Sign-up is closed. LiftPage sets up accounts for clients.</p>
           )}
-          <p className="mt-8 text-sm text-mute">
+          <p className="mt-8 text-sm text-muted">
             Have one?{" "}
-            <Link href="/login" className="text-tape underline underline-offset-4">
+            <Link href="/login" className="link">
               Sign in
             </Link>
           </p>

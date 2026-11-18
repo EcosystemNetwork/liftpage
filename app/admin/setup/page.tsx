@@ -7,9 +7,9 @@ import { KICKER } from "@/lib/ui";
 export const metadata = { title: "Setup" };
 
 const MARK: Record<Check["state"], { label: string; tone: string }> = {
-  on: { label: "On", tone: "text-tape" },
-  off: { label: "Off", tone: "text-mute" },
-  broken: { label: "Fix", tone: "text-heat" },
+  on: { label: "On", tone: "text-accent" },
+  off: { label: "Off", tone: "text-muted" },
+  broken: { label: "Fix", tone: "text-danger" },
 };
 
 const TABLES = ["profiles", "brands", "posts", "post_notes", "messages", "runs", "holds", "metrics", "social_accounts", "rate_limits", "stripe_events"];
@@ -42,9 +42,9 @@ export default async function SetupPage() {
   return (
     <>
       <section>
-        <p className={`${KICKER} text-tape`}>Setup</p>
-        <h1 className="mt-3 text-4xl font-semibold tracking-tight">What&rsquo;s plugged in.</h1>
-        <p className="mt-3 text-mute">
+        <p className={`${KICKER} text-accent`}>Setup</p>
+        <h1 className="mt-3 display text-5xl md:text-6xl">What&rsquo;s plugged in.</h1>
+        <p className="mt-3 text-muted">
           {on} of {checks.length} on{broken ? `, ${broken} to fix` : ""}. Keys go in <code className="font-mono text-sm">.env.local</code> (or the
           host&rsquo;s environment) and take effect on restart. Secrets are never shown here.
         </p>
@@ -52,12 +52,12 @@ export default async function SetupPage() {
       <section aria-label="Integrations">
         <ul className="grid gap-3 md:grid-cols-2">
           {checks.map((check) => (
-            <li key={check.id} className={`border p-4 ${check.state === "broken" ? "border-heat" : "border-line"}`}>
+            <li key={check.id} className={`border p-4 ${check.state === "broken" ? "border-danger" : "border-line"}`}>
               <div className="flex items-baseline justify-between gap-3">
                 <h2 className="text-lg font-semibold">{check.name}</h2>
                 <span className={`${KICKER} ${MARK[check.state].tone}`}>{MARK[check.state].label}</span>
               </div>
-              <p className="mt-1 text-sm text-mute">{check.detail}</p>
+              <p className="mt-1 text-sm text-muted">{check.detail}</p>
               {check.todo?.length ? (
                 <ul className="mt-3 grid gap-1 font-mono text-xs break-all">
                   {check.todo.map((line) => (

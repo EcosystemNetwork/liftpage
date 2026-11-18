@@ -61,19 +61,19 @@ export function MessageThread({
             const mine = m.role === viewer;
             return (
               <li key={m.id} className={`grid max-w-[85%] gap-1 ${mine ? "justify-self-end text-right" : "justify-self-start"}`}>
-                <span className={`${KICKER} text-mute`}>
+                <span className={`${KICKER} text-muted`}>
                   {mine ? "You" : m.role === "admin" ? `${m.authorName} · LiftPage` : m.authorName} · {formatStamp(m.at)}
                 </span>
-                <p className={`whitespace-pre-wrap break-words px-3 py-2 text-left ${mine ? "bg-tape text-ink" : "border border-line"}`}>{m.text}</p>
+                <p className={`whitespace-pre-wrap break-words rounded-2xl px-4 py-2.5 text-left ${mine ? "rounded-br-md bg-ink text-canvas" : "rounded-bl-md border border-line bg-card"}`}>{m.text}</p>
               </li>
             );
           })}
         </ol>
       ) : (
-        <p className="border border-line px-4 py-6 text-mute">No messages yet. Write to {otherName} below.</p>
+        <p className="panel px-5 py-6 text-muted">No messages yet. Write to {otherName} below.</p>
       )}
       {lastMine ? (
-        <p className={`${KICKER} -mt-2 text-right text-mute`} aria-live="polite">
+        <p className={`${KICKER} -mt-2 text-right text-muted`} aria-live="polite">
           {lastMine.readAt ? `Seen by ${otherName} · ${formatStamp(lastMine.readAt)}` : "Not seen yet"}
         </p>
       ) : null}
@@ -95,12 +95,12 @@ export function MessageThread({
                 form.current?.requestSubmit();
               }
             }}
-            className="border border-line bg-ink px-3 py-2 text-paper"
+            className="field py-2.5"
           />
         </label>
         <div className="flex flex-wrap items-center gap-3">
           <Submit busy="Sending">Send</Submit>
-          <span className="font-mono text-[11px] text-mute">Ctrl/⌘ + Enter</span>
+          <span className="font-mono text-[11px] text-muted">Ctrl/⌘ + Enter</span>
         </div>
         {state?.error ? <Notice state={state} /> : null}
       </form>

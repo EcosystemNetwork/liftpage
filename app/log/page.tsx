@@ -17,14 +17,14 @@ export default function LogPage() {
     <>
       <Header />
       <main id="main" className="px-4 py-10 md:px-8">
-        <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-tape">Build log</p>
-        <h1 className="mt-3 text-4xl font-semibold tracking-tight">What shipped, and what didn&apos;t.</h1>
+        <p className="eyebrow text-accent">Build log</p>
+        <h1 className="mt-3 display text-5xl md:text-6xl">What shipped, and what didn&apos;t.</h1>
         <ol className="mt-8 max-w-3xl">
           {ENTRIES.map(([day, title, line]) => (
             <li key={`${day}-${title}`} className="grid gap-2 border-t border-line py-4 md:grid-cols-[7rem_9rem_minmax(0,1fr)]">
-              <span className="font-mono text-sm text-mute">{day}</span>
+              <span className="font-mono text-sm text-muted">{day}</span>
               <span className="font-semibold">{title}</span>
-              <span className="text-mute">{line}</span>
+              <span className="text-muted">{line}</span>
             </li>
           ))}
         </ol>

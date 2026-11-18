@@ -1,6 +1,7 @@
 import "server-only";
 import { db, must, supabaseReady } from "./supabase/server";
-import type { AccountsFile, Metric, Role, User } from "./types";
+import { effectiveRole, isOwnerEmail, OWNER_EMAILS } from "./owner";
+import { CLIENT_STAGES, type AccountsFile, type ClientStage, type Metric, type User } from "./types";
 
 export const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -12,10 +13,13 @@ export function toUser(row: Row): User {
     email: row.email as string,
     name: (row.name as string) || "",
     company: (row.company as string) || "",
-    role: row.role as Role,
+    // Only the owner emails can be admins, whatever the row says.
+    role: effectiveRole(row.role as string, row.email as string),
     createdAt: row.created_at as string,
     lastLoginAt: (row.last_login_at as string | null) ?? undefined,
     disabled: Boolean(row.disabled),
+    // Before the admin-tools migration there is no stage column.
+    stage: CLIENT_STAGES.includes(row.stage as ClientStage) ? (row.stage as ClientStage) : "onboarding",
   };
 }
 
@@ -38,15 +42,27 @@ export function toMetric(row: Row): Metric {
 
 let bootstrapping: Promise<void> | undefined;
 
+/** The owner account bootstrap makes: LIFTPAGE_ADMIN_EMAIL if it is an owner email, else the first owner. */
+export function ownerEmail(): string {
+  const asked = process.env.LIFTPAGE_ADMIN_EMAIL?.trim().toLowerCase();
+  return asked && isOwnerEmail(asked) ? asked : OWNER_EMAILS[0];
+}
+
 /**
- * Makes the first admin from LIFTPAGE_ADMIN_EMAIL / LIFTPAGE_ADMIN_PASSWORD when there is
- * no admin yet. Does nothing once one exists. Runs at most once per server process.
+ * Makes the owner admin from LIFTPAGE_ADMIN_PASSWORD when the owner isn't one yet, and
+ * demotes any other admin row left from before admin was locked to the owner. Runs at most
+ * once per server process.
  */
 export function bootstrapAdmin(): Promise<void> {
   bootstrapping ??= (async () => {
-    const email = process.env.LIFTPAGE_ADMIN_EMAIL?.trim().toLowerCase();
+    if (!supabaseReady()) return;
+    must(
+      await db().from("profiles").update({ role: "client" }).eq("role", "admin").not("email", "in", `(${OWNER_EMAILS.map((e) => `"${e}"`).join(",")})`),
+      "demote non-owners",
+    );
+    const email = ownerEmail();
     const password = process.env.LIFTPAGE_ADMIN_PASSWORD;
-    if (!email || !password || !supabaseReady()) return;
+    if (!password) return;
     if (await adminExists()) return;
     const found = must(await db().from("profiles").select("id").eq("email", email).maybeSingle(), "find owner");
     let id = found?.id as string | undefined;
@@ -73,12 +89,17 @@ export function bootstrapAdmin(): Promise<void> {
 }
 
 export function hasAdminEnv(): boolean {
-  return Boolean(process.env.LIFTPAGE_ADMIN_EMAIL && process.env.LIFTPAGE_ADMIN_PASSWORD);
+  return Boolean(process.env.LIFTPAGE_ADMIN_PASSWORD);
 }
 
+/** True once an owner email holds the admin role. Other admin rows don't count. */
 export async function adminExists(): Promise<boolean> {
   if (!supabaseReady()) return false;
-  const { count, error } = await db().from("profiles").select("id", { count: "exact", head: true }).eq("role", "admin");
+  const { count, error } = await db()
+    .from("profiles")
+    .select("id", { count: "exact", head: true })
+    .eq("role", "admin")
+    .in("email", [...OWNER_EMAILS]);
   if (error) throw new Error(`count admins: ${error.message}`);
   return (count ?? 0) > 0;
 }
@@ -110,6 +131,10 @@ export async function touchLogin(id: string) {
 }
 
 export async function setProfile(id: string, patch: Partial<Pick<User, "name" | "company" | "role">>) {
+  if (patch.role === "admin") {
+    const user = await findUser(id);
+    if (!user || !isOwnerEmail(user.email)) throw new Error("Only the owner account can be an admin.");
+  }
   must(await db().from("profiles").update(patch).eq("id", id), "update profile");
 }
 
