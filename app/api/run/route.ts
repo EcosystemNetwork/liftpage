@@ -1,3 +1,4 @@
+import { adminOrResponse } from "@/lib/dal";
 import { cutWeek } from "@/lib/cut";
 import { nid } from "@/lib/id";
 import { updateDesk } from "@/lib/store";
@@ -6,6 +7,8 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const admin = await adminOrResponse();
+  if (admin instanceof Response) return admin;
   let body: { brief?: unknown };
   try {
     body = (await request.json()) as { brief?: unknown };

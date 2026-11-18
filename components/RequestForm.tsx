@@ -41,7 +41,7 @@ export function RequestForm() {
   if (status === "done") {
     return (
       <p role="status" className="border border-tape px-4 py-4 text-paper">
-        Requested. We'll answer that email. Nothing was charged.
+        Requested. We&apos;ll answer that email. Nothing was charged.
       </p>
     );
   }

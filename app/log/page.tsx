@@ -18,7 +18,7 @@ export default function LogPage() {
       <Header />
       <main id="main" className="px-4 py-10 md:px-8">
         <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-tape">Build log</p>
-        <h1 className="mt-3 text-4xl font-semibold tracking-tight">What shipped, and what didn't.</h1>
+        <h1 className="mt-3 text-4xl font-semibold tracking-tight">What shipped, and what didn&apos;t.</h1>
         <ol className="mt-8 max-w-3xl">
           {ENTRIES.map(([day, title, line]) => (
             <li key={`${day}-${title}`} className="grid gap-2 border-t border-line py-4 md:grid-cols-[7rem_9rem_minmax(0,1fr)]">

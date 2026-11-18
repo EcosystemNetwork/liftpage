@@ -1,3 +1,4 @@
+import { adminOrResponse } from "@/lib/dal";
 import { updateDesk } from "@/lib/store";
 import type { Post, Status } from "@/lib/types";
 
@@ -12,6 +13,8 @@ function clip(value: unknown, max: number): string | undefined {
 }
 
 export async function PATCH(request: Request) {
+  const admin = await adminOrResponse();
+  if (admin instanceof Response) return admin;
   let body: Partial<Post> & { id?: unknown };
   try {
     body = (await request.json()) as Partial<Post> & { id?: unknown };

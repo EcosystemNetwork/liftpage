@@ -17,7 +17,6 @@ export function ptOffsetMinutes(date: Date): number {
 export function zonedISO(y: number, m: number, d: number, hh: number, mm: number): string {
   const asUtc = Date.UTC(y, m - 1, d, hh, mm);
   const offset = ptOffsetMinutes(new Date(asUtc));
-  const utcMs = asUtc - offset * 60_000;
   const sign = offset <= 0 ? "-" : "+";
   const abs = Math.abs(offset);
   const pad = (n: number) => String(n).padStart(2, "0");

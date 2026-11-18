@@ -1,3 +1,4 @@
+import { adminOrResponse } from "@/lib/dal";
 import { updateDesk } from "@/lib/store";
 import { PLATFORMS, type Platform } from "@/lib/types";
 
@@ -5,6 +6,8 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function PATCH(request: Request) {
+  const admin = await adminOrResponse();
+  if (admin instanceof Response) return admin;
   let body: { voice?: unknown; offers?: unknown; platforms?: unknown };
   try {
     body = (await request.json()) as { voice?: unknown; offers?: unknown; platforms?: unknown };

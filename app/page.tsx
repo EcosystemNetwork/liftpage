@@ -201,7 +201,7 @@ export default function HomePage() {
         <section className="border-b border-line">
           <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 md:px-8 lg:grid-cols-2">
             <div>
-              <h2 className="font-mono text-[11px] uppercase tracking-[0.16em] text-mute">Who it's for</h2>
+              <h2 className="font-mono text-[11px] uppercase tracking-[0.16em] text-mute">Who it&apos;s for</h2>
               <ul className="mt-4">
                 {CLIENTS.map((line) => (
                   <li key={line} className="border-t border-line py-3">

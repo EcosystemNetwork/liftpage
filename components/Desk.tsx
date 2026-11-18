@@ -33,12 +33,12 @@ export function Desk({ initial }: { initial: DeskFile }) {
     return () => window.clearInterval(id);
   }, []);
 
-  useEffect(() => {
-    const post = desk.posts.find((item) => item.id === selected);
+  // Load the draft only when the operator picks another line. Saving must not wipe the field they are in.
+  function pick(id: string, posts: Post[] = desk.posts) {
+    setSelected(id);
+    const post = posts.find((item) => item.id === id);
     if (post) setDraft(post);
-    // Only when the operator picks another line. Saving must not wipe the field they are in.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected]);
+  }
 
   const groups = useMemo(() => {
     const map = new Map<string, Post[]>();
@@ -79,7 +79,7 @@ export function Desk({ initial }: { initial: DeskFile }) {
       setDesk(next);
       const run = next.runs[0];
       const first = run?.postIds[0];
-      if (first) setSelected(first);
+      if (first) pick(first, next.posts);
       setNotice(run?.note || "Week cut.");
       setBrief("");
     } catch (err) {
@@ -182,7 +182,7 @@ export function Desk({ initial }: { initial: DeskFile }) {
           </div>
           {desk.posts.length === 0 ? (
             <p className="mt-8 border border-line px-4 py-6 text-sm">
-              No cues yet. Drop the day's notes and cut.
+              No cues yet. Drop the day&apos;s notes and cut.
             </p>
           ) : (
             <div className="mt-6">
@@ -200,7 +200,7 @@ export function Desk({ initial }: { initial: DeskFile }) {
                           <button
                             type="button"
                             aria-pressed={on}
-                            onClick={() => setSelected(post.id)}
+                            onClick={() => pick(post.id)}
                             className={`flex min-h-16 w-full items-center gap-3 px-2 py-2 text-left ${on ? "bg-panel" : "bg-ink"}`}
                           >
                             <span

@@ -46,7 +46,59 @@ export type Hold = {
   packageId: PackageId;
   brandId: string;
   amount: number;
-  status: "requested";
+  status: HoldStatus;
+  /** The client account this request belongs to, once there is one. */
+  userId?: string;
+  note?: string;
+};
+
+export const HOLD_STATUSES = ["requested", "contacted", "won", "lost"] as const;
+
+export type HoldStatus = (typeof HOLD_STATUSES)[number];
+
+export type Role = "admin" | "client";
+
+export type User = {
+  id: string;
+  email: string;
+  name: string;
+  company: string;
+  role: Role;
+  passwordHash: string;
+  createdAt: string;
+  lastLoginAt?: string;
+  disabled: boolean;
+  /** Bumped to sign the user out everywhere. */
+  sessionVersion: number;
+};
+
+/** What leaves the server about a user. Never the hash. */
+export type PublicUser = Omit<User, "passwordHash" | "sessionVersion">;
+
+/** One week of numbers for one client on one platform. */
+export type Metric = {
+  id: string;
+  userId: string;
+  /** Monday of the week, YYYY-MM-DD. */
+  week: string;
+  platform: Platform;
+  followers: number;
+  impressions: number;
+  engagements: number;
+  clicks: number;
+  leads: number;
+  at: string;
+  /** Who entered it. */
+  by: string;
+};
+
+export const METRIC_FIELDS = ["followers", "impressions", "engagements", "clicks", "leads"] as const;
+
+export type MetricField = (typeof METRIC_FIELDS)[number];
+
+export type AccountsFile = {
+  users: User[];
+  metrics: Metric[];
 };
 
 export type DeskFile = {
