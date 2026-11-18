@@ -17,7 +17,7 @@ Desk: http://localhost:3070
 | Piece | What it does here |
 |---|---|
 | Next.js 16, React 19, Tailwind 4 | The site, the desk, accounts |
-| Supabase Postgres | Boards, posts, review notes, runs, requests, metrics, network connections, rate limits |
+| Supabase Postgres | Boards, posts, review notes, client messages, runs, requests, metrics, network connections, rate limits |
 | Supabase Auth | Sign-in, sign-up, invites, password resets |
 | Supabase Storage | Post media (`post-media` bucket), uploaded straight from the desk on signed URLs |
 | HarnessRouter | Cuts the day from a brief (falls back to the local operator) |
@@ -42,10 +42,11 @@ Network apps need review before they post publicly. TikTok posts are private (`S
 ## Accounts and boards
 
 - `/login`, `/signup`, `/forgot`: sign-in, client self sign-up (`LIFTPAGE_OPEN_SIGNUP=false` closes it), password reset.
-- `/account`: a client's board (approve a draft, request changes with a note, comment), their requests with a deposit button, and their weekly numbers with ranges, CSV import/export, and Sync now.
+- `/account`: a client's messages with LiftPage, their board (approve a draft, request changes with a note, comment), their requests with a deposit button, and their weekly numbers with ranges, CSV import/export, and Sync now.
 - `/admin`: clients, pipeline, won and paid value, requests.
+- `/admin/messages`: every client thread, newest first, with unread counts. Open one to reply.
 - `/admin/users`: invite accounts by email, switch accounts off, send reset links, change roles.
-- `/admin/customers/[id]`: one client's board link (or Open a board), numbers, Sync now.
+- `/admin/customers/[id]`: one client's message thread, board link (or Open a board), numbers, Sync now.
 - `/desk?board=<id>`: one board at a time. Cut, edit, attach media, approve, cue, Publish now, connect networks, read and answer the client's review. Admin-only, as are its APIs.
 
 Identity is Supabase Auth. Role and the switched-off flag live in `profiles` and are read on every request, so a demotion or switch-off bites at once. All tables have row-level security on with no policies: only the server, with the secret key, touches them, after `lib/dal.ts` has checked the caller. Network tokens are sealed with AES-256-GCM before they are stored.

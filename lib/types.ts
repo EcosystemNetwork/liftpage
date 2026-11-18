@@ -113,6 +113,20 @@ export type User = {
 /** Passwords live in Supabase Auth, so a profile row is safe to hand to a page. */
 export type PublicUser = User;
 
+/** One message in a client's thread with LiftPage. */
+export type Message = {
+  id: string;
+  /** The client account the thread belongs to. */
+  clientId: string;
+  authorId?: string;
+  authorName: string;
+  role: Role;
+  text: string;
+  at: string;
+  /** When the other side opened the thread after this was sent. */
+  readAt?: string;
+};
+
 /** One week of numbers for one client on one platform. */
 export type Metric = {
   id: string;

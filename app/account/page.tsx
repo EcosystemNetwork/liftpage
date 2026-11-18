@@ -6,10 +6,12 @@ import { CustomerStats } from "@/components/CustomerStats";
 import { Header } from "@/components/Header";
 import { MetricForm } from "@/components/MetricForm";
 import { HoldList } from "@/components/HoldList";
+import { MessageThread } from "@/components/MessageThread";
 import { requireUser } from "@/lib/dal";
 import { boardForClient, connectionsFor, holdsFor } from "@/lib/store";
 import { db, must } from "@/lib/supabase/server";
 import { toMetric } from "@/lib/accounts";
+import { loadThread, markRead } from "@/lib/messages";
 import { KICKER } from "@/lib/ui";
 
 export const metadata = { title: "Account" };
@@ -22,6 +24,10 @@ export default async function AccountPage() {
     holdsFor(user.id),
     isClient ? boardForClient(user.id) : null,
   ]);
+  const messages = isClient ? await loadThread(user.id) : [];
+  // Opening the account is reading the thread: LiftPage's messages count as seen.
+  if (messages.some((m) => m.role === "admin" && !m.readAt)) await markRead(user.id, "client");
+  const unread = messages.filter((m) => m.role === "admin" && !m.readAt).length;
   const metrics = (must(rows, "load numbers") ?? []).map(toMetric);
   const synced = board ? (await connectionsFor(board.brand.id)).length > 0 : false;
   const today = new Date().toISOString().slice(0, 10);
@@ -47,6 +53,14 @@ export default async function AccountPage() {
 
         {isClient ? (
           <>
+            <section id="messages" aria-labelledby="messages-title" className="max-w-3xl scroll-mt-6">
+              <h2 id="messages-title" className="text-2xl font-semibold">
+                Messages{unread ? <span className="ml-2 align-middle font-mono text-xs text-tape">{unread} new</span> : null}
+              </h2>
+              <p className="mt-2 mb-4 text-mute">Questions, assets, ideas, anything. The LiftPage team sees it on their side and replies here.</p>
+              <MessageThread messages={messages} viewer="client" otherName="LiftPage" />
+            </section>
+
             <section aria-labelledby="numbers">
               <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
                 <h2 id="numbers" className="text-2xl font-semibold">

@@ -1,4 +1,5 @@
 import "server-only";
+import { randomUUID } from "node:crypto";
 import { nid } from "./id";
 import { seedDesk } from "./seed";
 import { connectablePlatforms } from "./social/providers";
@@ -321,7 +322,8 @@ export async function addHold(hold: Omit<Hold, "id" | "at" | "status">): Promise
     await db()
       .from("holds")
       .insert({
-        id: nid("hold"),
+        // A request id is enough to open checkout for it, so it gets the full 122 random bits.
+        id: `hold_${randomUUID().replace(/-/g, "")}`,
         name: hold.name,
         email: hold.email,
         company: hold.company,

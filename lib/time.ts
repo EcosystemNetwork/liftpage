@@ -70,6 +70,17 @@ export function formatSlot(iso: string): string {
   }).format(new Date(iso));
 }
 
+/** "Nov 18, 2:05 PM" in Pacific, for message stamps. */
+export function formatStamp(iso: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: ZONE,
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(iso));
+}
+
 export function formatDay(iso: string): string {
   return new Intl.DateTimeFormat("en-US", {
     timeZone: ZONE,

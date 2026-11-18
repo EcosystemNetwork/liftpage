@@ -20,7 +20,7 @@ export async function Header() {
           <Link href="/" className="text-2xl font-semibold tracking-tight text-tape">
             LiftPage
           </Link>
-          <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.16em] text-mute">Social media marketing</p>
+          <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.16em] text-mute">Digital media marketing</p>
         </div>
         <nav className="flex flex-wrap items-center gap-1 font-mono text-[11px] uppercase tracking-[0.14em]">
           {user ? (

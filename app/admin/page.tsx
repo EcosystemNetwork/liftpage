@@ -3,6 +3,7 @@ import { Tile } from "@/components/CustomerStats";
 import { HoldList } from "@/components/HoldList";
 import { loadAccounts } from "@/lib/accounts";
 import { requireAdmin } from "@/lib/dal";
+import { unreadForAdmins } from "@/lib/messages";
 import { envChecks } from "@/lib/setup";
 import { siteUrl } from "@/lib/site";
 import { bookStats, change, fmt } from "@/lib/stats";
@@ -17,7 +18,7 @@ function plural(n: number, word: string) {
 
 export default async function AdminPage() {
   await requireAdmin("/admin");
-  const [accounts, desk] = await Promise.all([loadAccounts(), loadDesk()]);
+  const [accounts, desk, unread] = await Promise.all([loadAccounts(), loadDesk(), unreadForAdmins()]);
   const broken = envChecks(siteUrl()).filter((check) => check.state === "broken");
   const { clients, active, byStatus, pipeline, closed, recent, board, customers } = bookStats(accounts, desk);
 
@@ -26,6 +27,14 @@ export default async function AdminPage() {
       <section>
         <p className={`${KICKER} text-tape`}>Admin</p>
         <h1 className="mt-3 text-4xl font-semibold tracking-tight">The whole book.</h1>
+        {unread ? (
+          <p role="status" className="mt-4 border border-tape px-3 py-2 text-sm">
+            {unread} unread client message{unread === 1 ? "" : "s"}.{" "}
+            <Link href="/admin/messages" className="text-tape underline underline-offset-4">
+              Open Messages
+            </Link>
+          </p>
+        ) : null}
         {broken.length ? (
           <p role="status" className="mt-4 border border-heat px-3 py-2 text-sm">
             {broken.map((check) => check.name).join(", ")} {broken.length === 1 ? "needs" : "need"} fixing.{" "}

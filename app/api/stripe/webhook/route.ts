@@ -2,7 +2,7 @@ import type Stripe from "stripe";
 import { track } from "@/lib/analytics";
 import { notifyAddress, sendMail } from "@/lib/email";
 import { siteUrl } from "@/lib/site";
-import { fromMinor, stripe, webhookReady } from "@/lib/stripe";
+import { fromMinor, stripe, toMinor, webhookReady } from "@/lib/stripe";
 import { db, must } from "@/lib/supabase/server";
 import { PACKAGES, type PackageId } from "@/lib/types";
 
@@ -64,7 +64,13 @@ export async function POST(request: Request) {
   }
 
   // Remember it last: a crash above means Stripe retries and we try again.
-  await db().from("stripe_events").insert({ id: event.id, type: event.type, hold_id: holdId });
+  const { error } = await db().from("stripe_events").insert({ id: event.id, type: event.type, hold_id: holdId });
+  // 23505: a parallel delivery of the same event got there first. Every step above is safe
+  // to repeat, so a failed write asks Stripe to retry rather than going unnoticed.
+  if (error && error.code !== "23505") {
+    console.error("stripe webhook record", event.id, error.message);
+    return new Response("Couldn't record the event; retry.", { status: 500 });
+  }
   return Response.json({ received: true });
 }
 
@@ -92,6 +98,24 @@ async function markPaid(holdId: string, session: Stripe.Checkout.Session) {
   }
 
   const hold = updated[0];
+  // An admin can re-price a request while a checkout page is already open on the old price.
+  // The money is real, so the request still turns won; the owner hears about the gap.
+  if (session.amount_total !== toMinor(hold.amount)) {
+    await track(hold.id, "payment_amount_mismatch", { paid, price: hold.amount });
+    const to = notifyAddress();
+    if (to) {
+      await sendMail({
+        to,
+        subject: `${hold.company} paid $${paid.toLocaleString("en-US")}, but the price is $${hold.amount.toLocaleString("en-US")}`,
+        lines: [
+          `Request ${hold.id} was re-priced while a checkout page was open on the old price.`,
+          "It is marked won at what they paid. Settle the difference by hand, or refund in Stripe.",
+        ],
+        action: { label: "Open admin", url: `${siteUrl()}/admin` },
+        idempotencyKey: `amount-mismatch:${session.id}`,
+      });
+    }
+  }
   const pack = PACKAGES[hold.package_id]?.name ?? "campaign";
   const buyer = session.customer_details?.email ?? hold.email;
   await track(hold.id, "payment_completed", { package: hold.package_id, amount: paid, currency: session.currency ?? "usd" });

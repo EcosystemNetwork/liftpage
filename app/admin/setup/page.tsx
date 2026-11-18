@@ -12,7 +12,7 @@ const MARK: Record<Check["state"], { label: string; tone: string }> = {
   broken: { label: "Fix", tone: "text-heat" },
 };
 
-const TABLES = ["profiles", "brands", "posts", "post_notes", "runs", "holds", "metrics", "social_accounts", "rate_limits", "stripe_events"];
+const TABLES = ["profiles", "brands", "posts", "post_notes", "messages", "runs", "holds", "metrics", "social_accounts", "rate_limits", "stripe_events"];
 
 /** Probes the database for what the migrations make: tables and the media bucket. */
 async function databaseCheck(): Promise<Check> {

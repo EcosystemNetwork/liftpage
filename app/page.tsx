@@ -20,6 +20,11 @@ const SERVICES = [
   ["AI content production", "Drafts, cuts, and graphics. A person approves before anything goes live."],
   ["Influencer outreach", "Creators and communities who already hold the room."],
   ["Growth analytics", "Reach, replies, leads, and what turned into a customer."],
+  ["Paid social", "Boosts and ads on the posts already working. Ad spend is billed at cost."],
+  ["Livestream and podcast", "Demo days, panels, and interviews, run live and cut into clips after."],
+  ["Email and newsletters", "The list you own, written on the same calendar as the posts."],
+  ["Launch pages", "One page for the launch or the event, built to take the sign-up."],
+  ["Press and announcements", "The release, the media list, and the post that goes out the same hour."],
 ];
 
 const POSTS = [
@@ -82,13 +87,13 @@ export default function HomePage() {
           <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 md:px-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:py-20">
             <div>
               <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-tape">
-                Social media marketing
+                Digital media marketing
               </p>
               <h1 className="mt-4 max-w-xl text-5xl font-semibold leading-[0.95] tracking-tight md:text-7xl">
                 Attention into traction.
               </h1>
               <p className="mt-6 max-w-md text-lg text-paper">
-                We run social for companies creating the future. Posts, short video, and the campaign around a launch.
+                We run digital media for companies creating the future. Posts, short video, and the campaign around a launch.
               </p>
               <p className="mt-3 max-w-md text-mute">
                 Startups, founders, hackathons, and innovation communities. Instagram, TikTok, X, LinkedIn, and YouTube.
@@ -231,7 +236,7 @@ export default function HomePage() {
           <div className="mx-auto max-w-6xl px-4 py-12 md:px-8">
             <h2 className="font-mono text-[11px] uppercase tracking-[0.16em] text-mute">Pricing</h2>
             <p className="mt-3 max-w-xl text-mute">
-              Monthly retainers, plus a campaign price for a launch or a hackathon. Ads, travel, and a full shoot day are separate.
+              Monthly retainers, plus a campaign price for a launch or a hackathon. Ad spend, travel, and a full shoot day are separate.
             </p>
             <table className="mt-6 w-full text-left text-sm">
               <thead>

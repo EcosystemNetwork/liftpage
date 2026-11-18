@@ -4,6 +4,7 @@ import { KICKER } from "@/lib/ui";
 
 const TABS = [
   ["/admin", "Overview"],
+  ["/admin/messages", "Messages"],
   ["/admin/users", "Users"],
   ["/admin/setup", "Setup"],
   ["/desk", "Desk"],

@@ -23,5 +23,10 @@ export async function clearLimit(key: string) {
 export async function clientIp(): Promise<string> {
   const { headers } = await import("next/headers");
   const list = await headers();
-  return list.get("x-forwarded-for")?.split(",")[0]?.trim() || list.get("x-real-ip") || "local";
+  const hops = (list.get("x-forwarded-for") ?? "").split(",").map((hop) => hop.trim()).filter(Boolean);
+  // Vercel overwrites x-forwarded-for with the real client, so the first entry is trusted
+  // there. Behind any other proxy the first entry is whatever the caller sent; the last is
+  // what our own proxy saw, so a forged header can't reset the limits.
+  const ip = process.env.VERCEL ? hops[0] : hops.at(-1);
+  return ip || list.get("x-real-ip") || "local";
 }

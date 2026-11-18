@@ -3,9 +3,11 @@ import { notFound } from "next/navigation";
 import { OpenBoardForm, SyncButton } from "@/components/BoardForms";
 import { CustomerStats } from "@/components/CustomerStats";
 import { HoldList } from "@/components/HoldList";
+import { MessageThread } from "@/components/MessageThread";
 import { MetricForm } from "@/components/MetricForm";
 import { findUser, toMetric } from "@/lib/accounts";
 import { requireAdmin } from "@/lib/dal";
+import { loadThread, markRead } from "@/lib/messages";
 import { boardForClient, connectionsFor, holdsFor } from "@/lib/store";
 import { db, must } from "@/lib/supabase/server";
 import { PLATFORM_NAME } from "@/lib/types";
@@ -25,6 +27,8 @@ export default async function CustomerPage({ params }: PageProps<"/admin/custome
     holdsFor(user.id),
     boardForClient(user.id),
   ]);
+  const messages = await loadThread(user.id);
+  if (messages.some((m) => m.role === "client" && !m.readAt)) await markRead(user.id, "admin");
   const metrics = (must(rows, "load numbers") ?? []).map(toMetric);
   const connections = board ? await connectionsFor(board.brand.id) : [];
   const waiting = board ? board.posts.filter((post) => post.notes.at(-1)?.kind === "changes").length : 0;
@@ -38,6 +42,13 @@ export default async function CustomerPage({ params }: PageProps<"/admin/custome
           {user.name} · <span className="font-mono text-sm">{user.email}</span>
           {user.disabled ? " · switched off" : ""}
         </p>
+      </section>
+
+      <section id="messages" aria-labelledby="messages-title" className="max-w-3xl scroll-mt-6">
+        <h2 id="messages-title" className="mb-4 text-2xl font-semibold">
+          Messages
+        </h2>
+        <MessageThread messages={messages} viewer="admin" clientId={user.id} otherName={user.name || user.company} />
       </section>
 
       <section aria-labelledby="board">
