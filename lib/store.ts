@@ -265,6 +265,20 @@ export async function updatePost(id: string, patch: PostPatch) {
 }
 
 /**
+ * Takes a post off the schedule: new status, no cue (so a sleeping job stands down), and
+ * back to idle only if it is still just scheduled. A job that already took the publish
+ * lock keeps it; overwriting "publishing" would let the line go out twice.
+ */
+export async function retireCue(id: string, status: Status) {
+  const now = new Date().toISOString();
+  must(await db().from("posts").update({ status, cue_id: null, updated_at: now }).eq("id", id), "retire cue");
+  must(
+    await db().from("posts").update({ publish_state: "idle", updated_at: now }).eq("id", id).eq("publish_state", "scheduled"),
+    "unschedule",
+  );
+}
+
+/**
  * Takes the publish lock: flips the post to "publishing" only if nobody else has. With a
  * cueId, only if the post is still on that cue. Returns false when another job owns it.
  */
@@ -330,6 +344,15 @@ export async function loadHold(id: string): Promise<Hold | null> {
 
 export async function setHoldStatus(id: string, status: Hold["status"]) {
   must(await db().from("holds").update({ status }).eq("id", id), "set request status");
+}
+
+/** Re-prices an unpaid request (a quote for Event Launch, say). False if it's already paid. */
+export async function setHoldAmount(id: string, amount: number): Promise<boolean> {
+  const rows = must(
+    await db().from("holds").update({ amount }).eq("id", id).is("paid_at", null).select("id"),
+    "re-price request",
+  ) as Row[];
+  return rows.length === 1;
 }
 
 /** Links every unlinked request from this email to the account. */

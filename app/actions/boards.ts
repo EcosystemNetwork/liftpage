@@ -2,12 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { findUser } from "@/lib/accounts";
 import { track } from "@/lib/analytics";
 import { requireAdmin, requireUser } from "@/lib/dal";
 import { enqueue } from "@/lib/inngest/client";
 import { syncInsights } from "@/lib/social/insights";
-import { addNote, createBoard, loadBrand, loadPost, updatePost } from "@/lib/store";
+import { addNote, createBoard, loadBrand, loadPost, retireCue, updatePost } from "@/lib/store";
+import { mailClientReview } from "@/lib/review-mail";
 import { NOTE_KINDS, PLATFORMS, type NoteKind, type Platform } from "@/lib/types";
 import type { FormState } from "./auth";
 
@@ -57,12 +59,13 @@ export async function reviewPost(_: FormState, data: FormData): Promise<FormStat
   } else if (kind === "changes") {
     if (!note) return { error: "Say what should change." };
     if (post.publishState === "published" || post.publishState === "publishing") return { error: "That one already went out." };
-    await updatePost(postId, { status: "draft", cue_id: null, ...(post.publishState === "scheduled" ? { publish_state: "idle" } : {}) });
+    await retireCue(postId, "draft");
   } else if (!note) {
     return { error: "Write the comment first." };
   }
   await addNote({ postId, authorId: me.id, authorName: me.name || me.email, role: me.role, kind, text: note });
   await track(me.id, "post_reviewed", { kind });
+  after(() => mailClientReview(post, found.brandId, kind, note, me.name || me.email));
   revalidatePath("/account");
   return { ok: kind === "approved" ? "Approved." : kind === "changes" ? "Sent back with your note." : "Comment saved." };
 }

@@ -208,6 +208,16 @@ export function Desk({ initial, flash }: { initial: DeskFile; flash?: Flash }) {
     }
   }
 
+  async function askReview() {
+    setError("");
+    try {
+      const { notice } = await send("/api/review-request", { brandId }, "POST");
+      setNotice(notice ?? "Asked.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't ask the client.");
+    }
+  }
+
   async function unplug(platform: Platform) {
     try {
       await send(`/api/social/${platform}/disconnect`, { brandId }, "POST");
@@ -273,6 +283,16 @@ export function Desk({ initial, flash }: { initial: DeskFile; flash?: Flash }) {
             >
               {busy ? "Cutting" : "Cut the day"}
             </button>
+            {board?.clientId ? (
+              <button
+                type="button"
+                onClick={askReview}
+                disabled={counts.draft === 0}
+                className="min-h-10 border border-line px-3 font-mono text-xs uppercase tracking-[0.14em] disabled:opacity-50"
+              >
+                Ask the client to review
+              </button>
+            ) : null}
             {error ? (
               <p role="alert" className="text-sm text-heat">
                 {error}
@@ -318,7 +338,7 @@ export function Desk({ initial, flash }: { initial: DeskFile; flash?: Flash }) {
                                 {passed && post.status === "draft" ? " · passed" : ""}
                               </span>
                             </span>
-                            <StatusMark status={post.status} publish={post.publishState} notes={post.notes.length} />
+                            <StatusMark status={post.status} publish={post.publishState} notes={post.notes.length} sentBack={post.notes.at(-1)?.kind === "changes" && post.status === "draft"} />
                           </button>
                         </li>
                       );
@@ -579,13 +599,13 @@ const PUBLISH_LABEL: Record<Post["publishState"], string> = {
 
 const NOTE_LABEL = { approved: "approved", changes: "asked for changes", comment: "comment" } as const;
 
-function StatusMark({ status, publish, notes }: { status: Status; publish: Post["publishState"]; notes: number }) {
-  const label = publish === "published" ? "live" : publish === "failed" ? "failed" : status;
+function StatusMark({ status, publish, notes, sentBack }: { status: Status; publish: Post["publishState"]; notes: number; sentBack: boolean }) {
+  const label = publish === "published" ? "live" : publish === "failed" ? "failed" : sentBack ? "changes" : status;
   const strong = status === "cued" || publish === "published";
   return (
     <span
       className={`inline-flex min-h-10 items-center gap-1 px-2 font-mono text-[11px] uppercase tracking-[0.14em] ${
-        publish === "failed" ? "text-heat" : strong ? "bg-tape text-ink" : "text-mute"
+        publish === "failed" || sentBack ? "text-heat" : strong ? "bg-tape text-ink" : "text-mute"
       }`}
     >
       {label}

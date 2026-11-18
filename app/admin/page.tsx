@@ -3,6 +3,8 @@ import { Tile } from "@/components/CustomerStats";
 import { HoldList } from "@/components/HoldList";
 import { loadAccounts } from "@/lib/accounts";
 import { requireAdmin } from "@/lib/dal";
+import { envChecks } from "@/lib/setup";
+import { siteUrl } from "@/lib/site";
 import { bookStats, change, fmt } from "@/lib/stats";
 import { loadDesk } from "@/lib/store";
 import { KICKER } from "@/lib/ui";
@@ -16,6 +18,7 @@ function plural(n: number, word: string) {
 export default async function AdminPage() {
   await requireAdmin("/admin");
   const [accounts, desk] = await Promise.all([loadAccounts(), loadDesk()]);
+  const broken = envChecks(siteUrl()).filter((check) => check.state === "broken");
   const { clients, active, byStatus, pipeline, closed, recent, board, customers } = bookStats(accounts, desk);
 
   return (
@@ -23,6 +26,14 @@ export default async function AdminPage() {
       <section>
         <p className={`${KICKER} text-tape`}>Admin</p>
         <h1 className="mt-3 text-4xl font-semibold tracking-tight">The whole book.</h1>
+        {broken.length ? (
+          <p role="status" className="mt-4 border border-heat px-3 py-2 text-sm">
+            {broken.map((check) => check.name).join(", ")} {broken.length === 1 ? "needs" : "need"} fixing.{" "}
+            <Link href="/admin/setup" className="text-tape underline underline-offset-4">
+              Open Setup
+            </Link>
+          </p>
+        ) : null}
       </section>
 
       <section aria-labelledby="totals" className="grid gap-3">

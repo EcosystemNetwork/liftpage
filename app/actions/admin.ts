@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { authLink, EMAIL, findUser, findUserByEmail, setDisabled as switchAccount, setProfile } from "@/lib/accounts";
 import { requireAdmin } from "@/lib/dal";
 import { emailReady, sendMail } from "@/lib/email";
-import { linkHolds, loadHold, setHoldStatus as saveHoldStatus } from "@/lib/store";
+import { linkHolds, loadHold, setHoldAmount as saveHoldAmount, setHoldStatus as saveHoldStatus } from "@/lib/store";
 import { HOLD_STATUSES, type HoldStatus, type Role } from "@/lib/types";
 import type { FormState } from "./auth";
 
@@ -99,6 +99,17 @@ export async function setHoldStatus(data: FormData) {
   if (!HOLD_STATUSES.includes(status)) return;
   await saveHoldStatus(text(data, "holdId", 40), status);
   refresh();
+}
+
+/** Whole dollars. What the client's deposit button charges from now on. */
+export async function setHoldAmount(_: FormState, data: FormData): Promise<FormState> {
+  await requireAdmin();
+  const raw = text(data, "amount", 12).replace(/[$,\s]/g, "");
+  const amount = Number(raw);
+  if (!/^\d+$/.test(raw) || amount < 50 || amount > 100_000) return { error: "Whole dollars, $50 to $100,000." };
+  if (!(await saveHoldAmount(text(data, "holdId", 40), amount))) return { error: "Already paid, or gone. Paid requests keep their price." };
+  refresh();
+  return { ok: "Price set." };
 }
 
 export async function setRole(data: FormData) {

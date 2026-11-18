@@ -5,6 +5,7 @@ import { HOLD_STATUSES, PACKAGES, type Hold } from "@/lib/types";
 import { KICKER } from "@/lib/ui";
 import { ConvertHold } from "./ConvertHold";
 import { RowButton } from "./forms";
+import { HoldAmount } from "./HoldAmount";
 import { PayButton } from "./PayButton";
 
 const STATUS_LABEL = { requested: "Requested", contacted: "Contacted", won: "Won", lost: "Lost" } as const;
@@ -45,7 +46,9 @@ export function HoldList({ holds, admin = false }: { holds: Hold[]; admin?: bool
                     paid {fmt.money(hold.amountPaid ?? hold.amount)} ·{" "}
                     {new Date(hold.paidAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                   </span>
-                ) : !admin && stripeReady() && (hold.status === "requested" || hold.status === "contacted") ? (
+                ) : admin ? (
+                  <HoldAmount holdId={hold.id} amount={hold.amount} company={hold.company} />
+                ) : stripeReady() && (hold.status === "requested" || hold.status === "contacted") ? (
                   <PayButton holdId={hold.id} label="Pay deposit" className="mt-2" />
                 ) : null}
               </td>

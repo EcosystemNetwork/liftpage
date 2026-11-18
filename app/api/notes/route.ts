@@ -1,4 +1,6 @@
+import { after } from "next/server";
 import { adminOrResponse } from "@/lib/dal";
+import { mailAdminReply } from "@/lib/review-mail";
 import { addNote, loadDesk, loadPost } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -14,5 +16,6 @@ export async function POST(request: Request) {
   if (!found) return Response.json({ error: "That post is not on the board." }, { status: 404 });
   if (!text) return Response.json({ error: "Write the note first." }, { status: 400 });
   await addNote({ postId: found.post.id, authorId: admin.id, authorName: admin.name || "LiftPage", role: "admin", kind: "comment", text });
+  after(() => mailAdminReply(found.post, found.brandId, text));
   return Response.json({ desk: await loadDesk(found.brandId) });
 }
