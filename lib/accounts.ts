@@ -198,3 +198,23 @@ export async function authLink(
   url.searchParams.set("next", "/auth/password");
   return { url: url.toString(), userId: data.user.id };
 }
+
+/**
+ * Self-serve sign-up without Supabase sending its own email (its built-in sender is
+ * capped at a few emails an hour). Creates the unconfirmed auth user; the trigger makes
+ * the profile. `exists` means the email already has an account.
+ */
+export async function signupLink(
+  email: string,
+  password: string,
+  meta: { name: string; company: string },
+): Promise<{ url: string; userId: string } | { error: string; code?: string }> {
+  const { siteUrl } = await import("./site");
+  const { data, error } = await db().auth.admin.generateLink({ type: "signup", email, password, options: { data: meta } });
+  if (error || !data.properties?.hashed_token) return { error: error?.message ?? "No link came back.", code: error?.code };
+  const url = new URL("/auth/confirm", siteUrl());
+  url.searchParams.set("token_hash", data.properties.hashed_token);
+  url.searchParams.set("type", "signup");
+  url.searchParams.set("next", "/account");
+  return { url: url.toString(), userId: data.user.id };
+}

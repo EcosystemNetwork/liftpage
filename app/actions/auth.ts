@@ -2,7 +2,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
-import { authLink, EMAIL, findUser, passwordProblem, signupOpen, touchLogin } from "@/lib/accounts";
+import { authLink, EMAIL, findUser, passwordProblem, signupLink, signupOpen, touchLogin } from "@/lib/accounts";
 import { track } from "@/lib/analytics";
 import { requireUser, safeNext } from "@/lib/dal";
 import { emailReady, sendMail } from "@/lib/email";
@@ -77,6 +77,28 @@ async function trySignup(data: FormData): Promise<FormState> {
   if (!EMAIL.test(email)) return { error: "That email doesn't look usable." };
   const problem = passwordProblem(password);
   if (problem) return { error: problem };
+
+  // The same answer comes back for an email that already has an account, so this can't
+  // be used to find out who's a client.
+  const sent: FormState = { ok: "Check your email for the confirmation link." };
+  if (emailReady()) {
+    // Send the confirmation through Resend: Supabase's own sender rate-limits hard.
+    const link = await signupLink(email, password, { name, company });
+    if ("error" in link) {
+      if (link.code === "email_exists" || link.code === "user_already_exists") return sent;
+      if (link.code === "weak_password") return { error: "Pick a stronger password." };
+      console.error("signup link", link.error);
+      return { error: "That sign-up didn't go through. Try again." };
+    }
+    await sendMail({
+      to: email,
+      subject: "Confirm your LiftPage account",
+      lines: [`Hi ${name}, thanks for signing up.`, "Confirm your email to get into your account. If it wasn't you, ignore this."],
+      action: { label: "Confirm my email", url: link.url },
+    });
+    await track(link.userId, "signed_up", {});
+    return sent;
+  }
 
   const supabase = await authClient();
   const { data: result, error } = await supabase.auth.signUp({
