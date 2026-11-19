@@ -49,6 +49,7 @@ Network apps need review before they post publicly. TikTok posts are private (`S
 - `/admin/messages`: every client thread, newest first, with unread counts. Open one to reply.
 - `/admin/users`: invite accounts by email, switch accounts off, send reset links, change roles.
 - `/admin/customers/[id]`: one client's message thread, board link (or Open a board), numbers, Sync now.
+- **Content autopilot** (on `/admin/customers/[id]`): switch it on per client, pick a day, write standing instructions. On that day (3pm Pacific, Inngest `content-autopilot`) it reads what the client approved and sent back, last week's numbers by network, and the instructions, then cuts next week as drafts and can email the client to review. It never approves, schedules, or posts, and it holds off while 4+ drafts wait on review. Run now works without Inngest. Needs the `autopilot` migration and an AI backend.
 - `/desk?board=<id>`: one board at a time. Cut, edit, attach media, approve, cue, Publish now, connect networks, read and answer the client's review. Admin-only, as are its APIs.
 
 Identity is Supabase Auth. Role and the switched-off flag live in `profiles` and are read on every request, so a demotion or switch-off bites at once. All tables have row-level security on with no policies: only the server, with the secret key, touches them, after `lib/dal.ts` has checked the caller. Network tokens are sealed with AES-256-GCM before they are stored.

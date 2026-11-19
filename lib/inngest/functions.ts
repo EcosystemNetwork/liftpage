@@ -14,6 +14,8 @@ import type { Platform } from "../types";
 import { beginCampaign, contentStart, finishStage, newsletterStage, postsStage, researchStage, strategyStage } from "../agents/run";
 import type { Cut, Letter } from "../agents/content";
 import type { Research, Strategy } from "../agents/parse";
+import { enabledAutopilots, runAutopilot } from "../autopilot";
+import { isDue } from "../autopilot-plan";
 import { inngest } from "./client";
 
 /**
@@ -178,4 +180,27 @@ export const campaignRun = inngest.createFunction(
   },
 );
 
-export const functions = [publishAtSlot, holdCreated, insightsSync, housekeeping, weeklyReports, siteChecks, campaignRun];
+/**
+ * Content autopilot. Every afternoon it finds clients whose autopilot day is today and
+ * writes next week as drafts, one step per client. Drafts only: approval and publishing
+ * stay with people. A run skipped for a reason (drafts piling up, no AI) says why on the
+ * customer page.
+ */
+export const autopilotDaily = inngest.createFunction(
+  { id: "content-autopilot", retries: 1, concurrency: { limit: 1 }, triggers: [{ cron: "TZ=America/Los_Angeles 0 15 * * *" }] },
+  async ({ step }) => {
+    const due = await step.run("list-due", async () => {
+      const now = new Date();
+      return (await enabledAutopilots()).filter((s) => isDue(s, now)).map((s) => s.clientId);
+    });
+    const tally = { drafted: 0, skipped: 0 };
+    for (const clientId of due) {
+      const outcome = await step.run(`autopilot-${clientId}`, () => runAutopilot(clientId));
+      if ("ok" in outcome) tally.drafted++;
+      else tally.skipped++;
+    }
+    return tally;
+  },
+);
+
+export const functions = [publishAtSlot, holdCreated, insightsSync, housekeeping, weeklyReports, siteChecks, campaignRun, autopilotDaily];

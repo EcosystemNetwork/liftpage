@@ -12,7 +12,10 @@ import {
 } from "@/app/actions/clients";
 import { OpenBoardForm, SyncButton } from "@/components/BoardForms";
 import { ClientToolsForm, DraftWeekForm, NoteForm, ToolButton } from "@/components/ClientTools";
+import { AutopilotPanel } from "@/components/Autopilot";
 import { aiReady } from "@/lib/ai";
+import { loadAutopilot } from "@/lib/autopilot";
+import { jobsReady } from "@/lib/inngest/client";
 import { CLIENT_TOOLS } from "@/lib/tools";
 import { CustomerStats } from "@/components/CustomerStats";
 import { RowButton } from "@/components/forms";
@@ -45,7 +48,7 @@ export default async function CustomerPage({ params }: PageProps<"/admin/custome
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const user = await findUser(id);
   if (!user || user.role !== "client") notFound();
-  const [rows, holds, board, notes, events, suite, photos, setup] = await Promise.all([
+  const [rows, holds, board, notes, events, suite, photos, setup, autopilot] = await Promise.all([
     db().from("metrics").select("*").eq("user_id", user.id).order("week"),
     holdsFor(user.id),
     boardForClient(user.id),
@@ -54,6 +57,7 @@ export default async function CustomerPage({ params }: PageProps<"/admin/custome
     loadSuite(user.id),
     listPhotos(user.id),
     loadSetup(user.id),
+    loadAutopilot(user.id),
   ]);
   const messages = await loadThread(user.id);
   if (messages.some((m) => m.role === "client" && !m.readAt)) await markRead(user.id, "admin");
@@ -192,6 +196,27 @@ export default async function CustomerPage({ params }: PageProps<"/admin/custome
             Networks: {connections.length ? connections.map((c) => `${PLATFORM_NAME[c.platform]} ${c.accountName}`).join(", ") : "none connected. Connect them on the desk."}
           </p>
         ) : null}
+      </section>
+
+      <section id="autopilot" aria-labelledby="autopilot-title" className="scroll-mt-6">
+        <h2 id="autopilot-title" className="mb-1 display text-3xl">
+          Content autopilot
+        </h2>
+        <p className="mb-4 text-sm text-muted">An agent that writes {user.company}&rsquo;s next week every week, learning from their reviews and numbers. Drafts only.</p>
+        {board ? (
+          <div className="max-w-2xl panel p-5">
+            <AutopilotPanel
+              clientId={user.id}
+              brandName={board.brand.name}
+              settings={autopilot}
+              lastRun={autopilot.lastRunAt ? formatStamp(autopilot.lastRunAt) : undefined}
+              ready={aiReady()}
+              jobs={jobsReady()}
+            />
+          </div>
+        ) : (
+          <p className="text-muted">Open a board first. Autopilot writes onto the client&rsquo;s board.</p>
+        )}
       </section>
 
       <section aria-labelledby="client-tools">

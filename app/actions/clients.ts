@@ -13,6 +13,8 @@ import {
   setTools as saveTools,
   type ReportOutcome,
 } from "@/lib/admin";
+import { runAutopilot, saveAutopilot } from "@/lib/autopilot";
+import { GUIDANCE_MAX, WEEKDAYS } from "@/lib/autopilot-plan";
 import { setPostStatus } from "@/lib/cue";
 import { cutWeek } from "@/lib/cut";
 import { requireAdmin } from "@/lib/dal";
@@ -124,6 +126,46 @@ export async function draftWeek(_: FormState, data: FormData): Promise<FormState
   }
   refresh(got.client.id);
   return { ok: `${plural(cut.posts.length, "draft")} on the board. ${cut.note}${told}` };
+}
+
+/* ---------- Autopilot ---------- */
+
+/** Switches the client's content autopilot on or off, and sets its day and standing instructions. */
+export async function saveAutopilotAction(_: FormState, data: FormData): Promise<FormState> {
+  const got = await forClient(data);
+  if ("error" in got) return got;
+  const enabled = data.get("enabled") === "on";
+  if (enabled && !got.board) return { error: "Open a board for this client first. Autopilot writes onto it." };
+  const weekday = Number(text(data, "weekday", 1));
+  if (!Number.isInteger(weekday) || weekday < 0 || weekday > 6) return { error: "Pick a day." };
+  const settings = { enabled, weekday, guidance: text(data, "guidance", GUIDANCE_MAX), notify: data.get("notify") === "on" };
+  try {
+    await saveAutopilot(got.client.id, settings);
+  } catch (error) {
+    console.error("save autopilot", error);
+    return { error: "Autopilot didn't save. Try again." };
+  }
+  await logEvent(got.me, "autopilot", got.client.id, enabled ? `on, ${WEEKDAYS[weekday]}s` : "off");
+  refresh(got.client.id);
+  return {
+    ok: enabled
+      ? `On. Every ${WEEKDAYS[weekday]} afternoon (Pacific) it drafts the next week${jobsReady() ? "." : ". Background jobs are off, so it only runs when you press Run now."}`
+      : "Off. Nothing runs on its own.",
+  };
+}
+
+/** Runs autopilot for this client now, whatever the day. Same checks as the weekly run. */
+export async function runAutopilotNow(_: FormState, data: FormData): Promise<FormState> {
+  const got = await forClient(data);
+  if ("error" in got) return got;
+  try {
+    const outcome = await runAutopilot(got.client.id, got.me);
+    refresh(got.client.id);
+    return "ok" in outcome ? { ok: `${outcome.ok} On the board for review.` } : { error: `Skipped: ${outcome.skipped}` };
+  } catch (error) {
+    console.error("autopilot run", error);
+    return { error: "Autopilot stopped partway. Check the board before running it again." };
+  }
 }
 
 /** Approves every draft the client hasn't sent back. For when they said yes off the app. */
