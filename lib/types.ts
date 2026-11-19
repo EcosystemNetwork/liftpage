@@ -288,3 +288,39 @@ export type SetupAsk = (typeof SETUP_ASKS)[number];
 
 /** Where one network stands for a client: theirs (with the handle), ours to make, or not wanted. */
 export type SocialSetup = { platform: SetupPlatform; ask: SetupAsk; handle: string; note: string; status: "open" | "done"; updatedAt: string };
+
+/* ---------- Growth OS campaigns ---------- */
+
+export const AGENT_IDS = ["research", "strategy", "content", "distribution", "community", "analyst"] as const;
+export type AgentId = (typeof AGENT_IDS)[number];
+
+export const STEP_STATUSES = ["queued", "running", "done", "failed", "skipped"] as const;
+export type StepStatus = (typeof STEP_STATUSES)[number];
+
+export type AgentStep = {
+  agent: AgentId;
+  status: StepStatus;
+  startedAt?: string;
+  finishedAt?: string;
+  /** Which backend answered: harnessrouter, tokenrouter, local, or a mix. */
+  via?: string;
+  note: string;
+  output?: unknown;
+  error?: string;
+};
+
+export type CampaignStatus = "queued" | "running" | "ready" | "failed";
+
+export type Campaign = {
+  id: string;
+  brandId: string;
+  url: string;
+  goal: string;
+  competitors: string[];
+  status: CampaignStatus;
+  createdAt: string;
+  startedAt?: string;
+  finishedAt?: string;
+  postIds: string[];
+  steps: AgentStep[];
+};

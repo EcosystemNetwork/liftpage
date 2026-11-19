@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { CampaignCommand } from "@/components/CampaignCommand";
 import { dayKey, formatClock, formatDay, formatSlot } from "@/lib/time";
 import { PACKAGES, PLATFORM_NAME, PLATFORMS, type DeskFile, type Platform, type Post, type Status } from "@/lib/types";
 
@@ -86,6 +87,27 @@ export function Desk({ initial, flash }: { initial: DeskFile; flash?: Flash }) {
     }
     return { desk: payload.desk, notice: payload.notice };
   }
+
+  /** A campaign finished: load the fresh board and open its first draft. */
+  const takeCampaign = useCallback(
+    async (postIds: string[]) => {
+      try {
+        const response = await fetch(`/api/desk?board=${encodeURIComponent(brandId)}`);
+        const payload = (await response.json()) as { desk?: DeskFile };
+        if (!payload.desk) return;
+        setDesk(payload.desk);
+        const first = postIds.find((id) => payload.desk!.posts.some((post) => post.id === id));
+        if (first) {
+          setSelected(first);
+          setDraft(payload.desk.posts.find((post) => post.id === first));
+        }
+        setNotice(`Campaign ready: ${postIds.length} drafts on the board. Review and approve before anything is cued.`);
+      } catch {
+        setError("The campaign finished, but the board didn't reload. Refresh the page.");
+      }
+    },
+    [brandId],
+  );
 
   async function cutWeek() {
     setBusy(true);
@@ -283,6 +305,7 @@ export function Desk({ initial, flash }: { initial: DeskFile; flash?: Flash }) {
             {board?.clientId ? " · client board. The client reviews it from their account." : " · house board."} Cued lines post at their
             slot on the connected network.
           </p>
+          <CampaignCommand brandId={brandId} onDrafts={takeCampaign} />
           <label className="mt-5 grid gap-2 text-sm" htmlFor="brief">
             Brief for the next cut
             <textarea
