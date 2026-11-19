@@ -1,15 +1,19 @@
 import "server-only";
+import { lookup as dnsLookup, type LookupAddress, type LookupOptions } from "node:dns";
 import { lookup } from "node:dns/promises";
+import { request as httpRequest, type IncomingMessage } from "node:http";
+import { request as httpsRequest } from "node:https";
 import { BlockList, isIP } from "node:net";
+import { Readable } from "node:stream";
 
 /*
  * Reads a public web page for the Research agent. The URL comes from a person, so this is
  * an SSRF surface: http(s) on the default ports only, no credentials in the URL, and every
  * hop (including redirects) must resolve only to public addresses.
  *
- * Residual risk: fetch resolves DNS again after our check, so a rebinding DNS server could
- * still swap in a private address between the two lookups. Closing that needs a custom
- * dispatcher that connects to the address we checked; it's on the backlog.
+ * DNS rebinding: the connection's own lookup is `safeLookup`, which refuses any non-public
+ * answer. The address we judge is the address we connect to, so a DNS server can't hand
+ * our pre-check a public address and the socket a private one.
  */
 
 export type SitePage = {
@@ -103,6 +107,59 @@ async function assertPublic(url: URL): Promise<void> {
   if (addresses.some((entry) => !isPublicAddress(entry.address))) throw new Error("That address isn't on the public internet.");
 }
 
+type LookupCallback = (error: NodeJS.ErrnoException | null, address: string | LookupAddress[], family?: number) => void;
+
+/**
+ * A drop-in for dns.lookup that fails when any resolved address isn't public. Node calls it
+ * with `all: true` (happy eyeballs) or without; both shapes are answered. `resolve` is
+ * injectable for tests.
+ */
+export function safeLookup(
+  hostname: string,
+  options: LookupOptions,
+  callback: LookupCallback,
+  resolve: (host: string, done: (error: NodeJS.ErrnoException | null, addresses: LookupAddress[]) => void) => void = (host, done) =>
+    dnsLookup(host, { all: true, verbatim: true }, done),
+): void {
+  resolve(hostname, (error, addresses) => {
+    if (error) return callback(error, options.all ? [] : "", 0);
+    const wanted = options.family === 4 || options.family === 6 ? addresses.filter((entry) => entry.family === options.family) : addresses;
+    if (!wanted.length || wanted.some((entry) => !isPublicAddress(entry.address))) {
+      const refused: NodeJS.ErrnoException = new Error("That address isn't on the public internet.");
+      refused.code = "EADDRNOTPUBLIC";
+      return callback(refused, options.all ? [] : "", 0);
+    }
+    if (options.all) return callback(null, wanted);
+    callback(null, wanted[0].address, wanted[0].family);
+  });
+}
+
+/** One GET with no redirects followed, connecting only through safeLookup. */
+function pinnedGet(url: URL, headers: Record<string, string>, timeoutMs: number): Promise<Response> {
+  const send = url.protocol === "https:" ? httpsRequest : httpRequest;
+  return new Promise((resolve, reject) => {
+    const req = send(url, { method: "GET", headers: { ...headers, "Accept-Encoding": "identity" }, lookup: safeLookup as never, timeout: timeoutMs }, (res: IncomingMessage) => {
+      const status = res.statusCode ?? 502;
+      const head = new Headers();
+      for (const [key, value] of Object.entries(res.headers)) {
+        if (value === undefined) continue;
+        for (const item of Array.isArray(value) ? value : [value]) head.append(key, item);
+      }
+      if (status < 200 || status > 599) {
+        res.destroy();
+        return reject(new Error(`The site answered ${status}.`));
+      }
+      const body = status === 204 || status === 304 ? null : (Readable.toWeb(res) as ReadableStream<Uint8Array>);
+      resolve(new Response(body, { status, headers: head }));
+    });
+    req.on("timeout", () => req.destroy(new Error("The site took too long to answer.")));
+    req.on("error", (error: NodeJS.ErrnoException) =>
+      reject(error.code === "EADDRNOTPUBLIC" ? new Error("That address isn't on the public internet.") : new Error(`Couldn't load ${url.hostname}.`)),
+    );
+    req.end();
+  });
+}
+
 async function readCapped(response: Response): Promise<string> {
   if (!response.body) return "";
   const reader = response.body.getReader();
@@ -133,11 +190,7 @@ export async function readSite(input: string): Promise<SitePage> {
   let url: URL = first;
   for (let hop = 0; hop <= MAX_HOPS; hop++) {
     await assertPublic(url);
-    const response: Response = await fetch(url, {
-      redirect: "manual",
-      signal: AbortSignal.timeout(10_000),
-      headers: { "User-Agent": "LiftPageResearch/1.0", Accept: "text/html,application/xhtml+xml,text/plain;q=0.8" },
-    });
+    const response: Response = await pinnedGet(url, { "User-Agent": "LiftPageResearch/1.0", Accept: "text/html,application/xhtml+xml,text/plain;q=0.8" }, 10_000);
     if (response.status >= 300 && response.status < 400) {
       const location: string | null = response.headers.get("location");
       await response.body?.cancel().catch(() => undefined);

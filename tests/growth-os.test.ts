@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { campaignBrief, parseResearch, parseStrategy } from "@/lib/agents/parse";
-import { htmlToPage, isPublicAddress, normalizeUrl } from "@/lib/read-site";
+import { htmlToPage, isPublicAddress, normalizeUrl, safeLookup } from "@/lib/read-site";
 
 describe("isPublicAddress", () => {
   it.each(["127.0.0.1", "10.1.2.3", "172.16.0.9", "192.168.1.1", "169.254.169.254", "100.64.0.1", "0.0.0.0", "::1", "::", "fd00::1", "fe80::1", "::ffff:127.0.0.1", "::ffff:10.0.0.1", "[::1]"])(
@@ -119,5 +119,31 @@ describe("campaignBrief", () => {
   it("tells the writer not to claim results when the site shows none", () => {
     const bare = parseResearch(JSON.stringify({ product: "A", oneLiner: "B", proofOnSite: [] }))!;
     expect(campaignBrief(bare, parseStrategy(strategy)!, "")).toContain("Do not claim results.");
+  });
+});
+
+describe("safeLookup (DNS rebinding)", () => {
+  type Addr = { address: string; family: number };
+  const resolver = (answer: Addr[]) => (_host: string, done: (error: NodeJS.ErrnoException | null, addresses: Addr[]) => void) => done(null, answer);
+  const run = (answer: Addr[], options: { all?: boolean; family?: number }) =>
+    new Promise<{ error: NodeJS.ErrnoException | null; address: unknown }>((resolve) =>
+      safeLookup("rebind.test", options as never, (error, address) => resolve({ error, address }), resolver(answer)),
+    );
+
+  it("refuses when the connection-time answer is private", async () => {
+    const { error } = await run([{ address: "127.0.0.1", family: 4 }], {});
+    expect(error?.code).toBe("EADDRNOTPUBLIC");
+  });
+  it("refuses a mixed answer, even if one address is public", async () => {
+    const { error } = await run([{ address: "8.8.8.8", family: 4 }, { address: "169.254.169.254", family: 4 }], { all: true });
+    expect(error?.code).toBe("EADDRNOTPUBLIC");
+  });
+  it("passes public answers through in both callback shapes", async () => {
+    expect((await run([{ address: "8.8.8.8", family: 4 }], {})).address).toBe("8.8.8.8");
+    expect((await run([{ address: "8.8.8.8", family: 4 }], { all: true })).address).toEqual([{ address: "8.8.8.8", family: 4 }]);
+  });
+  it("honours a requested family", async () => {
+    const { address } = await run([{ address: "::ffff:10.0.0.1", family: 6 }, { address: "1.1.1.1", family: 4 }], { family: 4 });
+    expect(address).toBe("1.1.1.1");
   });
 });
