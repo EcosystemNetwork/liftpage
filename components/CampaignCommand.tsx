@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Research, Strategy } from "@/lib/agents/parse";
+import type { Distribution } from "@/lib/agents/distribution";
+import type { Analysis, Community, Research, Strategy } from "@/lib/agents/parse";
 import { AGENT_ROSTER } from "@/lib/agents/roster";
 import { PLATFORM_NAME, type AgentStep, type Campaign, type Platform, type StepStatus } from "@/lib/types";
 
@@ -298,6 +299,97 @@ function StepOutput({ agent, output }: { agent: string; output: unknown }) {
         {content.newsletter ? (
           <pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap rounded-lg bg-sunken p-3 font-sans text-sm">{content.newsletter}</pre>
         ) : null}
+      </details>
+    );
+  }
+  if (agent === "distribution") {
+    const plan = output as Distribution;
+    return (
+      <details className="mt-2 text-sm">
+        <summary className="cursor-pointer">
+          The week, tagged <code className="text-xs">{plan.campaignTag}</code>
+        </summary>
+        <ol className="mt-2 grid gap-1">
+          {plan.placements.map((item) => (
+            <li key={item.postId} className="break-words">
+              <span className="tabular-nums text-muted">Day {item.day}</span> <span className="eyebrow text-muted">{PLATFORM_NAME[item.platform]}</span>{" "}
+              {new Date(item.slot).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" })} ·{" "}
+              <span className="text-muted">
+                {item.linkPlacement === "caption" ? "link tagged in caption" : item.linkPlacement === "bio" ? "use as bio link" : "add link by hand"}
+              </span>
+              {item.linkPlacement !== "caption" ? <code className="mt-0.5 block text-xs text-muted">{item.link}</code> : null}
+            </li>
+          ))}
+        </ol>
+        <p className="mt-3 eyebrow text-muted">Newsletter link</p>
+        <code className="block break-all text-xs">{plan.newsletterLink}</code>
+        <p className="mt-2 text-muted">Slots are proposals on drafts. Nothing goes out until someone approves and cues it.</p>
+      </details>
+    );
+  }
+  if (agent === "community") {
+    const community = output as Community;
+    return (
+      <details className="mt-2 text-sm">
+        <summary className="cursor-pointer">
+          {community.communities.length} places to show up, {community.outreach.length} outreach drafts
+        </summary>
+        <div className="mt-2 grid gap-3">
+          {community.communities.length ? (
+            <div>
+              <p className="eyebrow text-muted">Communities (unchecked: confirm each exists and read its rules)</p>
+              <ul className="mt-1 grid gap-1">
+                {community.communities.map((item) => (
+                  <li key={item.name}>
+                    <strong>{item.name}</strong> <span className="text-muted">{item.where}</span> {item.why}
+                    {item.etiquette ? <span className="block text-muted">Etiquette: {item.etiquette}</span> : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          <Bullets
+            title="Find creators with these searches"
+            items={community.creatorSearches.map((item) => `${PLATFORM_NAME[item.platform]}: "${item.query}" (${item.fit})`)}
+          />
+          {community.outreach.map((draft, index) => (
+            <div key={index}>
+              <p className="eyebrow text-muted">
+                Draft to {draft.to || "a contact"}
+                {draft.channel ? ` · ${draft.channel}` : ""}
+              </p>
+              {draft.subject ? <p className="mt-1 font-medium">{draft.subject}</p> : null}
+              <pre className="mt-1 whitespace-pre-wrap rounded-lg bg-sunken p-3 font-sans text-sm">{draft.message}</pre>
+            </div>
+          ))}
+          <Bullets title="Watch out for" items={community.cautions} />
+        </div>
+      </details>
+    );
+  }
+  if (agent === "analyst") {
+    const analysis = output as Analysis & { weeksRead: number };
+    return (
+      <details className="mt-2 text-sm">
+        <summary className="cursor-pointer">
+          {analysis.experiments.length} experiments{analysis.weeksRead ? `, from ${analysis.weeksRead} weeks of numbers` : ", no numbers yet"}
+        </summary>
+        <div className="mt-2 grid gap-3">
+          <p>{analysis.readout}</p>
+          <Bullets title={analysis.weeksRead ? "Baseline" : "Record before day 1"} items={analysis.baseline} />
+          <ol className="grid gap-2">
+            {analysis.experiments.map((test) => (
+              <li key={test.name} className="rounded-lg border border-line px-3 py-2">
+                <p className="font-medium">{test.name}</p>
+                <p>{test.hypothesis}</p>
+                <p className="text-muted">
+                  Change: {test.change} · Measure: {test.metric} · Win: {test.successBar} · {test.days} days
+                </p>
+              </li>
+            ))}
+          </ol>
+          <Bullets title="Tracking to set up" items={analysis.tracking} />
+        </div>
       </details>
     );
   }
