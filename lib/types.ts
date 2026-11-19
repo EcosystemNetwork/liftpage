@@ -91,6 +91,8 @@ export type Hold = {
   /** Set by the Stripe webhook once the deposit clears. */
   amountPaid?: number;
   paidAt?: string;
+  /** What the client wants from the campaign, when they started it from their account. */
+  brief?: string;
 };
 
 export const HOLD_STATUSES = ["requested", "contacted", "won", "lost"] as const;
@@ -229,7 +231,8 @@ export type ChangeStatus = (typeof CHANGE_STATUSES)[number];
 
 export type ChangeRequest = {
   id: string;
-  projectId: string;
+  /** Missing for "anything else" requests that aren't about one project. */
+  projectId?: string;
   clientId: string;
   text: string;
   status: ChangeStatus;
@@ -261,3 +264,27 @@ export type Plan = {
   /** A Stripe subscription exists, so a card is on file. */
   subscribed: boolean;
 };
+
+/* ---------- Client self-serve: photos and social account setup ---------- */
+
+/** A photo a client handed over. `url` is a short-lived signed link. */
+export type ClientPhoto = { id: string; clientId: string; url: string; type: string; size: number; caption: string; at: string };
+
+export const SETUP_PLATFORMS = ["facebook", "instagram", "tiktok", "x", "linkedin", "youtube", "google"] as const;
+export type SetupPlatform = (typeof SETUP_PLATFORMS)[number];
+
+export const SETUP_NAME: Record<SetupPlatform, string> = {
+  facebook: "Facebook",
+  instagram: "Instagram",
+  tiktok: "TikTok",
+  x: "X",
+  linkedin: "LinkedIn",
+  youtube: "YouTube",
+  google: "Google Business Profile",
+};
+
+export const SETUP_ASKS = ["have", "make", "skip"] as const;
+export type SetupAsk = (typeof SETUP_ASKS)[number];
+
+/** Where one network stands for a client: theirs (with the handle), ours to make, or not wanted. */
+export type SocialSetup = { platform: SetupPlatform; ask: SetupAsk; handle: string; note: string; status: "open" | "done"; updatedAt: string };

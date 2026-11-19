@@ -3,6 +3,11 @@ import { PasswordForm } from "@/components/AuthForms";
 import { SyncButton } from "@/components/BoardForms";
 import { ClientBoard } from "@/components/ClientBoard";
 import { ClientWeekForm } from "@/components/ClientAi";
+import { CampaignForm } from "@/components/CampaignForm";
+import { ClientOverview } from "@/components/ClientOverview";
+import { PhotoLibrary } from "@/components/PhotoLibrary";
+import { SocialSetupForm } from "@/components/SocialSetup";
+import { listPhotos, loadSetup } from "@/lib/client-files";
 import { Writer } from "@/components/Writer";
 import { aiReady } from "@/lib/ai";
 import { FORMATS, isFormat } from "@/lib/formats";
@@ -16,11 +21,12 @@ import { boardForClient, connectionsFor, holdsFor } from "@/lib/store";
 import { db, must } from "@/lib/supabase/server";
 import { toMetric } from "@/lib/accounts";
 import { loadThread, markRead } from "@/lib/messages";
+import { overview } from "@/lib/overview";
 import { planNotice, socialSummary } from "@/lib/plan";
 import { loadSuite } from "@/lib/projects";
 import { stripeReady } from "@/lib/stripe";
 import { KICKER } from "@/lib/ui";
-import { ProjectSuite } from "@/components/ProjectSuite";
+import { GeneralRequests, ProjectSuite } from "@/components/ProjectSuite";
 
 export const metadata = { title: "Account" };
 
@@ -28,11 +34,13 @@ export default async function AccountPage({ searchParams }: PageProps<"/account"
   const user = await requireUser("/account");
   const isClient = user.role === "client";
   const searched = await searchParams;
-  const [rows, holds, board, suite] = await Promise.all([
+  const [rows, holds, board, suite, photos, setup] = await Promise.all([
     db().from("metrics").select("*").eq("user_id", user.id).order("week"),
     holdsFor(user.id),
     isClient ? boardForClient(user.id) : null,
     isClient ? loadSuite(user.id) : null,
+    isClient ? listPhotos(user.id) : [],
+    isClient ? loadSetup(user.id) : [],
   ]);
   const messages = isClient ? await loadThread(user.id) : [];
   // Opening the account is reading the thread: LiftPage's messages count as seen.
@@ -45,6 +53,8 @@ export default async function AccountPage({ searchParams }: PageProps<"/account"
   const toReview = board
     ? board.posts.filter((p) => p.status === "draft" && p.publishState !== "published" && p.publishState !== "publishing").length
     : 0;
+  // Onboarding: until they've told us about their social accounts, that's a to-do.
+  const setupDue = isClient && !setup.length;
 
   return (
     <>
@@ -69,14 +79,21 @@ export default async function AccountPage({ searchParams }: PageProps<"/account"
           <>
             <section aria-labelledby="todo-title" className="panel grid gap-4 p-6">
               <h2 id="todo-title" className="display text-3xl">
-                {toReview || unread ? "Needs you" : "Nothing needs you right now"}
+                {toReview || unread || setupDue ? "Needs you" : "Nothing needs you right now"}
               </h2>
-              {toReview || unread ? (
+              {toReview || unread || setupDue ? (
                 <ul className="grid gap-3 text-lg">
                   {toReview ? (
                     <li>
                       <Link href="#board" className="btn-primary">
                         Look over {toReview} {toReview === 1 ? "post" : "posts"} before they go out
+                      </Link>
+                    </li>
+                  ) : null}
+                  {setupDue ? (
+                    <li>
+                      <Link href="#social-setup" className={toReview ? "btn-ghost" : "btn-primary"}>
+                        Tell us about your social media accounts
                       </Link>
                     </li>
                   ) : null}
@@ -91,6 +108,39 @@ export default async function AccountPage({ searchParams }: PageProps<"/account"
               ) : (
                 <p className="text-lg text-muted">We&rsquo;ll email you when there&rsquo;s a post to look over or a message to read.</p>
               )}
+            </section>
+
+            <ClientOverview
+              company={user.company}
+              since={user.createdAt}
+              handle={board?.brand.handle}
+              plan={suite.plan}
+              projects={suite.projects}
+              data={overview({ metrics, posts: board?.posts ?? [], connections, platforms: board?.brand.platforms ?? [] })}
+            />
+
+            <section id="start-campaign" aria-labelledby="campaign-title" className="max-w-3xl scroll-mt-20">
+              <h2 id="campaign-title" className="display text-3xl">
+                Start a campaign
+              </h2>
+              <p className="mt-2 mb-4 text-muted">Pick a package and tell us what it&rsquo;s for. We reply within one business day.</p>
+              <CampaignForm />
+            </section>
+
+            <section id="photos" aria-labelledby="photos-title" className="scroll-mt-20">
+              <h2 id="photos-title" className="display text-3xl">
+                Your photos
+              </h2>
+              <p className="mt-2 mb-4 text-muted">Give us photos to post: your place, your people, your products. Add a note if a photo is for something special.</p>
+              <PhotoLibrary photos={photos} />
+            </section>
+
+            <section id="social-setup" aria-labelledby="social-setup-title" className="max-w-3xl scroll-mt-20">
+              <h2 id="social-setup-title" className="display text-3xl">
+                Your social media accounts
+              </h2>
+              <p className="mt-2 mb-4 text-muted">Tell us which accounts you already have, or have us make them for you.</p>
+              <SocialSetupForm setup={setup} />
             </section>
 
             {board && user.tools.length ? (
@@ -155,6 +205,14 @@ export default async function AccountPage({ searchParams }: PageProps<"/account"
               />
             </section>
 
+            <section id="changes" aria-labelledby="changes-title" className="scroll-mt-20">
+              <h2 id="changes-title" className="display text-3xl">
+                Ask for a change
+              </h2>
+              <p className="mt-2 mb-4 text-muted">Anything at all, about any part of what we do for you. For one post, use Request changes on that post.</p>
+              <GeneralRequests changes={suite.changes} />
+            </section>
+
             <section aria-labelledby="numbers">
               <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
                 <h2 id="numbers" className="display text-3xl">
@@ -174,7 +232,7 @@ export default async function AccountPage({ searchParams }: PageProps<"/account"
               ) : (
                 <p className="text-muted">
                   None yet.{" "}
-                  <Link href="/#start" className="link">
+                  <Link href="#start-campaign" className="link">
                     Start a campaign
                   </Link>
                 </p>

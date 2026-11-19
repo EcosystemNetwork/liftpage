@@ -12,7 +12,7 @@ import type { Suite } from "@/lib/projects";
 import { formatStamp } from "@/lib/time";
 import type { ChangeRequest, Plan, Project } from "@/lib/types";
 import { KICKER } from "@/lib/ui";
-import { ChangeForm, CheckNowButton } from "./SuiteForms";
+import { ChangeForm, CheckNowButton, GeneralChangeForm } from "./SuiteForms";
 
 /** What the social card can say about the board, worked out by the page. */
 export type SocialSummary = { drafts: number; scheduled: number; published: number; networks: string[] };
@@ -142,6 +142,31 @@ function ProjectCard({ project, changes, social, preview }: { project: Project; 
         </details>
       )}
     </article>
+  );
+}
+
+/** Requests not tied to a project, with the form to send one. `preview` hides the form. */
+export function GeneralRequests({ changes, preview = false }: { changes: ChangeRequest[]; preview?: boolean }) {
+  const general = changes.filter((c) => !c.projectId);
+  return (
+    <div className="grid gap-4 lg:grid-cols-2 [&>*]:min-w-0">
+      {preview ? null : <GeneralChangeForm />}
+      {general.length ? (
+        <ul className="grid content-start gap-2">
+          {general.slice(0, 10).map((c) => (
+            <li key={c.id} className="flex items-start justify-between gap-3 border-b border-line pb-2 text-sm last:border-0">
+              <span className="min-w-0">
+                <span className="line-clamp-3 whitespace-pre-wrap">{c.text}</span>
+                <span className="font-mono text-xs text-muted">{formatStamp(c.at)}</span>
+              </span>
+              <Pill tone={c.status === "done" ? "good" : "quiet"}>{CHANGE_STATUS_LABEL[c.status]}</Pill>
+            </li>
+          ))}
+        </ul>
+      ) : preview ? (
+        <p className="text-muted">No general requests.</p>
+      ) : null}
+    </div>
   );
 }
 

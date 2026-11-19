@@ -11,7 +11,7 @@ import { CheckNowButton, ProjectForm, PlanForm } from "./SuiteForms";
 export function SuiteAdmin({ clientId, suite }: { clientId: string; suite: Suite }) {
   const { projects, changes, plan } = suite;
   const open = changes.filter((c) => c.status !== "done");
-  const name = (projectId: string) => projects.find((p) => p.id === projectId)?.name ?? "Removed project";
+  const name = (projectId?: string) => (projectId ? (projects.find((p) => p.id === projectId)?.name ?? "Removed project") : "General request");
   return (
     <div className="grid gap-8">
       {open.length ? (

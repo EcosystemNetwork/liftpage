@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { requestGeneralChange } from "@/app/actions/client";
 import { checkNow, requestChange, savePlanAction, saveProjectAction } from "@/app/actions/projects";
 import { OFFER_LABEL, PLAN_STATUS_LABEL, PROJECT_STATUS_LABEL } from "@/lib/plan";
 import { PLAN_OFFERS, PLAN_STATUSES, PROJECT_STATUSES, type Plan, type Project } from "@/lib/types";
@@ -30,6 +31,33 @@ export function ChangeForm({ projectId, kind }: { projectId: string; kind: Proje
       </label>
       <Message state={state} />
       <Submit busy="Sending" className="justify-self-start btn-sm">
+        Send request
+      </Submit>
+    </form>
+  );
+}
+
+/** A change that isn't about one project: "anything else". */
+export function GeneralChangeForm({ clientId }: { clientId?: string }) {
+  const [state, run] = useActionState(requestGeneralChange, undefined);
+  return (
+    <form action={run} className="grid gap-2">
+      {clientId ? <input type="hidden" name="clientId" value={clientId} /> : null}
+      <label className={LABEL}>
+        <span className="sr-only">What should change</span>
+        <textarea
+          name="text"
+          required
+          minLength={4}
+          maxLength={4000}
+          rows={3}
+          defaultValue={state?.fields?.text}
+          placeholder="New logo for everything, pause posting next week, add Facebook, change our phone number everywhere…"
+          className={AREA}
+        />
+      </label>
+      <Message state={state} />
+      <Submit busy="Sending" className="justify-self-start">
         Send request
       </Submit>
     </form>

@@ -20,6 +20,9 @@ import { FlagList } from "@/components/FlagList";
 import { HoldList } from "@/components/HoldList";
 import { MessageThread } from "@/components/MessageThread";
 import { MetricForm } from "@/components/MetricForm";
+import { PhotoLibrary } from "@/components/PhotoLibrary";
+import { SocialSetupAdmin } from "@/components/SocialSetup";
+import { listPhotos, loadSetup } from "@/lib/client-files";
 import { findUser, toMetric } from "@/lib/accounts";
 import { bookHealth, loadClientNotes, loadEvents } from "@/lib/admin";
 import { requireAdmin } from "@/lib/dal";
@@ -42,13 +45,15 @@ export default async function CustomerPage({ params }: PageProps<"/admin/custome
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const user = await findUser(id);
   if (!user || user.role !== "client") notFound();
-  const [rows, holds, board, notes, events, suite] = await Promise.all([
+  const [rows, holds, board, notes, events, suite, photos, setup] = await Promise.all([
     db().from("metrics").select("*").eq("user_id", user.id).order("week"),
     holdsFor(user.id),
     boardForClient(user.id),
     loadClientNotes(user.id),
     loadEvents({ clientId: user.id, limit: 30 }),
     loadSuite(user.id),
+    listPhotos(user.id),
+    loadSetup(user.id),
   ]);
   const messages = await loadThread(user.id);
   if (messages.some((m) => m.role === "client" && !m.readAt)) await markRead(user.id, "admin");
@@ -108,6 +113,24 @@ export default async function CustomerPage({ params }: PageProps<"/admin/custome
         <p className="mb-4 text-sm text-muted">What {user.company} sees at the top of their account: their website, their social, and what they pay.</p>
         <SuiteAdmin clientId={user.id} suite={suite} />
       </section>
+
+      <div className="grid gap-12 lg:grid-cols-2 [&>*]:min-w-0">
+        <section id="social-setup" aria-labelledby="setup-title" className="scroll-mt-6">
+          <h2 id="setup-title" className="mb-1 display text-3xl">
+            Social accounts
+          </h2>
+          <p className="mb-4 text-sm text-muted">What {user.company} told us: accounts they have, and ones they want us to make.</p>
+          <SocialSetupAdmin setup={setup} clientId={user.id} />
+        </section>
+
+        <section id="photos" aria-labelledby="photos-title" className="scroll-mt-6">
+          <h2 id="photos-title" className="mb-1 display text-3xl">
+            Photos
+          </h2>
+          <p className="mb-4 text-sm text-muted">{photos.length ? `${photos.length} from ${user.company}. Links last an hour; reload for fresh ones.` : `Nothing from ${user.company} yet.`}</p>
+          <PhotoLibrary photos={photos} clientId={user.id} />
+        </section>
+      </div>
 
       <section aria-labelledby="tools">
         <h2 id="tools" className="mb-1 display text-3xl">

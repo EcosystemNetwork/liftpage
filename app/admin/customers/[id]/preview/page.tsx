@@ -1,11 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ClientBoard } from "@/components/ClientBoard";
+import { ClientOverview } from "@/components/ClientOverview";
 import { CustomerStats } from "@/components/CustomerStats";
 import { HoldList } from "@/components/HoldList";
 import { findUser, toMetric } from "@/lib/accounts";
 import { requireAdmin } from "@/lib/dal";
-import { ProjectSuite } from "@/components/ProjectSuite";
+import { PhotoLibrary } from "@/components/PhotoLibrary";
+import { GeneralRequests, ProjectSuite } from "@/components/ProjectSuite";
+import { listPhotos } from "@/lib/client-files";
+import { overview } from "@/lib/overview";
 import { socialSummary } from "@/lib/plan";
 import { loadSuite } from "@/lib/projects";
 import { boardForClient, connectionsFor, holdsFor } from "@/lib/store";
@@ -24,11 +28,12 @@ export default async function PreviewPage({ params }: PageProps<"/admin/customer
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const user = await findUser(id);
   if (!user || user.role !== "client") notFound();
-  const [rows, holds, board, suite] = await Promise.all([
+  const [rows, holds, board, suite, photos] = await Promise.all([
     db().from("metrics").select("*").eq("user_id", user.id).order("week"),
     holdsFor(user.id),
     boardForClient(user.id),
     loadSuite(user.id),
+    listPhotos(user.id),
   ]);
   const metrics = (must(rows, "load numbers") ?? []).map(toMetric);
   const connections = board ? await connectionsFor(board.brand.id) : [];
@@ -46,11 +51,31 @@ export default async function PreviewPage({ params }: PageProps<"/admin/customer
         <h1 className="mt-3 display text-5xl">{user.name}</h1>
       </section>
 
+      <ClientOverview
+        company={user.company}
+        since={user.createdAt}
+        handle={board?.brand.handle}
+        plan={suite.plan}
+        projects={suite.projects}
+        data={overview({ metrics, posts: board?.posts ?? [], connections, platforms: board?.brand.platforms ?? [] })}
+        preview
+      />
+
       <section aria-labelledby="projects">
         <h2 id="projects" className="mb-4 display text-3xl">
           Their projects
         </h2>
         <ProjectSuite suite={suite} social={board ? socialSummary(board.posts, connections) : null} preview />
+        <div className="mt-6">
+          <GeneralRequests changes={suite.changes} preview />
+        </div>
+      </section>
+
+      <section aria-labelledby="photos">
+        <h2 id="photos" className="mb-4 display text-3xl">
+          Their photos
+        </h2>
+        <PhotoLibrary photos={photos} readOnly />
       </section>
 
       <section aria-labelledby="numbers">

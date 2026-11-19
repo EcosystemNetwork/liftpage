@@ -38,7 +38,10 @@ export function HoldList({ holds, admin = false }: { holds: Hold[]; admin?: bool
                   <span className="block font-mono text-xs text-muted">{hold.email}</span>
                 </td>
               ) : null}
-              <td className="px-3 py-2">{PACKAGES[hold.packageId].name}</td>
+              <td className="px-3 py-2">
+                {PACKAGES[hold.packageId].name}
+                {hold.brief ? <span className="mt-1 block max-w-sm whitespace-pre-wrap text-xs text-muted line-clamp-3">{hold.brief}</span> : null}
+              </td>
               <td className="px-3 py-2 text-right font-mono">
                 {fmt.money(hold.amount)}
                 {hold.paidAt ? (

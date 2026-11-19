@@ -23,7 +23,10 @@ export async function notifyHold(holdId: string): Promise<{ confirmation: boolea
     ? await sendMail({
         to: admin,
         subject: `New request: ${hold.company} · ${pack.name}`,
-        lines: [`${hold.name} <${hold.email}> at ${hold.company} asked for ${pack.name} (${pack.price}).`],
+        lines: [
+          `${hold.name} <${hold.email}> at ${hold.company} asked for ${pack.name} (${pack.price}).`,
+          ...(hold.brief ? [`Their brief: "${hold.brief}"`] : []),
+        ],
         action: { label: "Open admin", url: `${siteUrl()}/admin` },
         replyTo: hold.email,
         idempotencyKey: `hold-notice/${hold.id}`,

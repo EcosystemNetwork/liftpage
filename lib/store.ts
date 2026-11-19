@@ -101,6 +101,7 @@ export function toHold(row: Row): Hold {
     note: opt<string>(row.note),
     amountPaid: row.amount_paid == null ? undefined : Number(row.amount_paid),
     paidAt: opt<string>(row.paid_at),
+    brief: (row.brief as string | null) || undefined,
   };
 }
 
@@ -331,6 +332,7 @@ export async function addHold(hold: Omit<Hold, "id" | "at" | "status">): Promise
         brand_id: hold.brandId || null,
         amount: hold.amount,
         user_id: hold.userId ?? null,
+        ...(hold.brief ? { brief: hold.brief } : {}),
       })
       .select("*")
       .single(),

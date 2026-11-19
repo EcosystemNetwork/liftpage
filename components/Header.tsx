@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { logout } from "@/app/actions/auth";
 import { currentUser } from "@/lib/dal";
@@ -16,6 +17,8 @@ const NAV = "inline-flex min-h-10 items-center rounded-full px-3 text-sm text-mu
 export function Wordmark() {
   return (
     <Link href="/" className="group inline-flex items-baseline gap-1.5" aria-label="LiftPage home">
+      {/* 468×530 source, cropped tight to the mark. Decorative: the link carries the name. */}
+      <Image src="/liftlogo.png" alt="" width={468} height={530} loading="eager" className="h-7 w-auto self-center" />
       <span className="display text-[1.75rem] leading-none">LiftPage</span>
       <span aria-hidden="true" className="size-1.5 translate-y-[-2px] rounded-full bg-accent transition-transform group-hover:-translate-y-1.5" />
     </Link>

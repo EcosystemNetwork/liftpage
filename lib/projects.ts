@@ -35,7 +35,7 @@ function toProject(row: Row): Project {
 function toChange(row: Row): ChangeRequest {
   return {
     id: row.id as string,
-    projectId: row.project_id as string,
+    projectId: opt<string>(row.project_id),
     clientId: row.client_id as string,
     text: row.text as string,
     status: row.status as ChangeStatus,
@@ -126,6 +126,15 @@ export async function deleteProject(clientId: string, id: string) {
 export async function addChange(project: Project, authorId: string, text: string): Promise<ChangeRequest> {
   const row = must(
     await db().from("change_requests").insert({ project_id: project.id, client_id: project.clientId, author_id: authorId, text }).select("*").single(),
+    "save change request",
+  ) as Row;
+  return toChange(row);
+}
+
+/** A request about nothing in particular: "anything else". */
+export async function addGeneralChange(clientId: string, authorId: string, text: string): Promise<ChangeRequest> {
+  const row = must(
+    await db().from("change_requests").insert({ project_id: null, client_id: clientId, author_id: authorId, text }).select("*").single(),
     "save change request",
   ) as Row;
   return toChange(row);
