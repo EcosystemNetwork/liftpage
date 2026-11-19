@@ -213,21 +213,48 @@ export async function publishPost(postId: string, cueId?: string): Promise<Publi
   }
   const { post, brandId, mediaPath } = found;
   const media: Media = mediaPath && post.mediaUrl ? { url: post.mediaUrl, type: post.mediaType ?? "", path: mediaPath } : undefined;
+  let result: Published;
   try {
     const account = await accountFor(brandId, post.platform);
-    const result = await PUBLISHERS[post.platform](account, post, media);
-    await updatePost(postId, {
-      publish_state: "published",
-      published_url: result.url ?? null,
-      published_at: new Date().toISOString(),
-      publish_error: result.note ?? null,
-    });
-    await track(brandId, "post_published", { platform: post.platform });
-    return { ok: true, url: result.url, note: result.note };
+    result = await PUBLISHERS[post.platform](account, post, media);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     await updatePost(postId, { publish_state: "failed", publish_error: message.slice(0, 500) });
     await track(brandId, "post_publish_failed", { platform: post.platform });
     return { ok: false, error: message };
   }
+  // The network has the post now. Never mark it failed from here: "failed" invites a retry,
+  // and a retry would post it twice. If recording keeps failing, the post stays
+  // "publishing", and housekeeping later flags it to be checked on the network by hand.
+  const recorded = await recordPublished(postId, result);
+  await track(brandId, "post_published", { platform: post.platform }).catch(() => undefined);
+  if (!recorded) {
+    return {
+      ok: true,
+      url: result.url,
+      note: `Posted${result.url ? ` (${result.url})` : ""}, but LiftPage couldn't record it. Don't publish this line again; check the network.`,
+    };
+  }
+  return { ok: true, url: result.url, note: result.note };
+}
+
+const RECORD_TRIES = 3;
+
+/** Saves a successful publish, retrying a flaky database. False if it never stuck. */
+export async function recordPublished(postId: string, result: Published, pause = (attempt: number) => wait(500 * attempt)): Promise<boolean> {
+  for (let attempt = 1; attempt <= RECORD_TRIES; attempt++) {
+    try {
+      await updatePost(postId, {
+        publish_state: "published",
+        published_url: result.url ?? null,
+        published_at: new Date().toISOString(),
+        publish_error: result.note ?? null,
+      });
+      return true;
+    } catch (error) {
+      console.error("record publish", postId, attempt, error);
+      if (attempt < RECORD_TRIES) await pause(attempt);
+    }
+  }
+  return false;
 }

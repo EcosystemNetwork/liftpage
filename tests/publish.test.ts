@@ -5,6 +5,8 @@ const state = {
   post: null as null | { post: Post; brandId: string; cueId?: string; mediaPath?: string },
   claim: true,
   updates: [] as Record<string, unknown>[],
+  /** How many "published" writes fail before one succeeds. */
+  recordFailures: 0,
 };
 
 vi.mock("@/lib/store", () => ({
@@ -12,6 +14,10 @@ vi.mock("@/lib/store", () => ({
   loadPost: async () => state.post,
   claimPublish: async () => state.claim,
   updatePost: async (_id: string, patch: Record<string, unknown>) => {
+    if (patch.publish_state === "published" && state.recordFailures > 0) {
+      state.recordFailures--;
+      throw new Error("database hiccup");
+    }
     state.updates.push(patch);
   },
 }));
@@ -25,7 +31,7 @@ vi.mock("@/lib/social/oauth", async (original) => {
   };
 });
 
-const { publishPost } = await import("@/lib/social/publish");
+const { publishPost, recordPublished } = await import("@/lib/social/publish");
 
 function post(over: Partial<Post> = {}): Post {
   return {
@@ -48,6 +54,7 @@ describe("publishPost", () => {
     state.post = { post: post(), brandId: "b1", cueId: "c1" };
     state.claim = true;
     state.updates = [];
+    state.recordFailures = 0;
     vi.restoreAllMocks();
   });
 
@@ -92,6 +99,24 @@ describe("publishPost", () => {
     const out = await publishPost("p1");
     expect(out).toMatchObject({ ok: false });
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("never marks a post failed after the network took it, even if recording fails", async () => {
+    state.recordFailures = 99;
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ data: { id: "7" } }), { status: 201 }));
+    const out = await publishPost("p1", "c1");
+    expect(out).toMatchObject({ ok: true, url: "https://x.com/liftpage/status/7" });
+    expect(String(out.ok && out.note)).toContain("Don't publish this line again");
+    expect(state.updates.some((u) => u.publish_state === "failed")).toBe(false);
+  }, 10_000);
+
+  it("retries a flaky record and succeeds", async () => {
+    state.recordFailures = 1;
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const ok = await recordPublished("p1", { url: "https://x.com/a/status/1" }, async () => undefined);
+    expect(ok).toBe(true);
+    expect(state.updates.at(-1)).toMatchObject({ publish_state: "published" });
   });
 
   it("is a no-op for a post that's gone", async () => {
