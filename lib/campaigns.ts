@@ -135,3 +135,28 @@ export async function finishCampaign(id: string, status: "ready" | "failed", pat
 export async function recordDrafts(id: string, postIds: string[], memory: unknown) {
   must(await db().from("campaigns").update({ post_ids: postIds, memory }).eq("id", id), "save campaign drafts");
 }
+
+/**
+ * What the brand's last finished campaign learned (its research and strategy), so the next
+ * run can build on it instead of starting cold. Null when there's no earlier campaign.
+ */
+export async function previousMemory(brandId: string, excludeId: string): Promise<{ memory: unknown; at: string } | null> {
+  const { data, error } = await db()
+    .from("campaigns")
+    .select("memory, created_at")
+    .eq("brand_id", brandId)
+    .eq("status", "ready")
+    .neq("id", excludeId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(`load campaign memory: ${error.message}`);
+  return data ? { memory: (data as Row).memory, at: (data as Row).created_at as string } : null;
+}
+
+/** A board's recent campaigns, newest first, with their steps. */
+export async function campaignsFor(brandId: string, limit = 20): Promise<Campaign[]> {
+  const { data, error } = await db().from("campaigns").select(SELECT).eq("brand_id", brandId).order("created_at", { ascending: false }).limit(limit);
+  if (error) throw new Error(`load campaigns: ${error.message}`);
+  return ((data ?? []) as Row[]).map(toCampaign);
+}

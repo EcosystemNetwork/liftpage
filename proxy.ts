@@ -44,7 +44,7 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     // Everything except static files, images, and the machine endpoints that carry their
-    // own signatures (Inngest, Stripe) and must not get session cookies.
-    "/((?!_next/static|_next/image|favicon.ico|icon|api/inngest|api/stripe/webhook|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    // own signatures (Inngest, Stripe), and the public tracking intake, which must not get session cookies.
+    "/((?!_next/static|_next/image|favicon.ico|icon|api/inngest|api/stripe/webhook|api/track|lp\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };
