@@ -203,4 +203,17 @@ export const autopilotDaily = inngest.createFunction(
   },
 );
 
-export const functions = [publishAtSlot, holdCreated, insightsSync, housekeeping, weeklyReports, siteChecks, campaignRun, autopilotDaily];
+/**
+ * Local smoke test: drafts a caption without touching the database or any network.
+ * Send `liftpage/hello` with { business, offer } from the Dev Server to try it.
+ */
+export const hello = inngest.createFunction(
+  { id: "liftpage-hello", retries: 1, triggers: [{ event: "liftpage/hello" }] },
+  async ({ event, step }) => {
+    const { business = "Your business", offer = "something new" } = (event.data ?? {}) as { business?: string; offer?: string };
+    const caption = await step.run("draft-caption", () => `${business} has ${offer} this week. Come see us!`);
+    return { business, caption, characters: caption.length };
+  },
+);
+
+export const functions = [hello, publishAtSlot,holdCreated, insightsSync, housekeeping, weeklyReports, siteChecks, campaignRun, autopilotDaily];

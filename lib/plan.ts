@@ -46,6 +46,7 @@ export const PLAN_NOTICES = {
   "too-many": "Too many tries. Wait a while.",
   "no-plan": "There's no plan waiting for a card.",
   "stripe-failed": "Stripe didn't open a checkout page. Try again.",
+  "no-billing": "There's no card on file yet, so there's nothing to manage.",
 } as const;
 export type PlanNotice = keyof typeof PLAN_NOTICES;
 

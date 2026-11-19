@@ -5,8 +5,10 @@ import { authLink, EMAIL, findUser, findUserByEmail, setDisabled as switchAccoun
 import { logEvent } from "@/lib/admin";
 import { requireAdmin } from "@/lib/dal";
 import { emailReady, sendMail } from "@/lib/email";
-import { linkHolds, loadHold, setHoldAmount as saveHoldAmount, setHoldStatus as saveHoldStatus } from "@/lib/store";
-import { HOLD_STATUSES, type HoldStatus } from "@/lib/types";
+import { planCustomer } from "@/lib/projects";
+import { holdInvoiceId, linkHolds, loadHold, setHoldAmount as saveHoldAmount, setHoldInvoice, setHoldStatus as saveHoldStatus } from "@/lib/store";
+import { currency, customerFor, PAYABLE, stripe, stripeReady, taxOn, toMinor } from "@/lib/stripe";
+import { HOLD_STATUSES, PACKAGES, type HoldStatus } from "@/lib/types";
 import type { FormState } from "./auth";
 
 function text(data: FormData, key: string, max: number): string {
@@ -115,6 +117,83 @@ export async function setHoldAmount(_: FormState, data: FormData): Promise<FormS
   await logEvent(me, "request price", hold?.userId, `${hold?.company ?? holdId}: $${amount}`);
   refresh();
   return { ok: "Price set." };
+}
+
+/**
+ * Sends the client a Stripe invoice for an unpaid request at its current price: Stripe
+ * emails it with a pay link, due in 14 days. The webhook marks the request won on
+ * invoice.paid, and voids the invoice if the checkout button pays first.
+ */
+export async function sendHoldInvoice(_: FormState, data: FormData): Promise<FormState> {
+  const me = await requireAdmin();
+  if (!stripeReady()) return { error: "Stripe isn't set up." };
+  const hold = await loadHold(text(data, "holdId", 40));
+  if (!hold) return { error: "That request is gone." };
+  if (hold.paidAt) return { error: "Already paid." };
+  if (!PAYABLE.has(hold.status)) return { error: "Closed requests can't be invoiced." };
+
+  const tax = taxOn();
+  const pack = PACKAGES[hold.packageId];
+  try {
+    const existing = await holdInvoiceId(hold.id);
+    if (existing) {
+      const out = await stripe().invoices.retrieve(existing);
+      if (out.status === "open" && out.metadata?.amount === String(hold.amount)) {
+        return { ok: `Already sent at this price. Pay link: ${out.hosted_invoice_url ?? "see Stripe"}` };
+      }
+      // Re-priced since it went out: the old invoice can't be paid any more.
+      if (out.status === "open") await stripe().invoices.voidInvoice(existing);
+    }
+
+    const customer = await customerFor(hold.email, {
+      known: hold.userId ? await planCustomer(hold.userId) : null,
+      name: hold.name || hold.company,
+      clientId: hold.userId,
+    });
+    // Keyed on request + price + what it replaces, so a double click doesn't send two.
+    const key = `hold-invoice:${hold.id}:${hold.amount}:${existing ?? "first"}`;
+    const invoice = await stripe().invoices.create(
+      {
+        customer,
+        collection_method: "send_invoice",
+        days_until_due: 14,
+        pending_invoice_items_behavior: "exclude",
+        metadata: { holdId: hold.id, amount: String(hold.amount) },
+        description: `${hold.company}: LiftPage ${pack?.name ?? "campaign"}`,
+        ...(tax ? { automatic_tax: { enabled: true } } : {}),
+      },
+      { idempotencyKey: key },
+    );
+    const id = invoice.id!;
+    await stripe().invoiceItems.create(
+      {
+        customer,
+        invoice: id,
+        amount: toMinor(hold.amount),
+        currency: currency(),
+        description: `LiftPage ${pack?.name ?? "campaign"}`,
+        ...(tax ? { tax_behavior: "exclusive" as const } : {}),
+        metadata: { holdId: hold.id },
+      },
+      { idempotencyKey: `${key}:item` },
+    );
+    await stripe().invoices.finalizeInvoice(id, {}, { idempotencyKey: `${key}:finalize` });
+    const sent = await stripe().invoices.sendInvoice(id, {}, { idempotencyKey: `${key}:send` });
+    if (!(await setHoldInvoice(hold.id, id))) {
+      await stripe().invoices.voidInvoice(id);
+      return { error: "It was paid while sending, so the invoice was voided." };
+    }
+    await logEvent(me, "request invoiced", hold.userId, `${hold.company}: $${hold.amount}, ${id}`);
+    refresh();
+    return { ok: `Invoice emailed to ${hold.email}. Pay link: ${sent.hosted_invoice_url ?? "see Stripe"}` };
+  } catch (error) {
+    console.error("send invoice", hold.id, error);
+    const message = error instanceof Error ? error.message : "unknown error";
+    if (tax && /tax|location|address/i.test(message)) {
+      return { error: "Stripe Tax needs this customer's address. Add it to the customer in Stripe, then send again." };
+    }
+    return { error: `Stripe said no: ${message}` };
+  }
 }
 
 export async function setDisabled(data: FormData) {

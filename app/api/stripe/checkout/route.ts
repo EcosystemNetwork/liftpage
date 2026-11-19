@@ -1,7 +1,7 @@
 import { currentUser } from "@/lib/dal";
 import { clientIp, limited } from "@/lib/rate";
 import { siteUrl } from "@/lib/site";
-import { PAYABLE, currency, stripe, stripeReady, toMinor } from "@/lib/stripe";
+import { PAYABLE, currency, stripe, stripeReady, taxOn, toMinor } from "@/lib/stripe";
 import { db, must } from "@/lib/supabase/server";
 import { PACKAGES, type PackageId } from "@/lib/types";
 
@@ -54,6 +54,7 @@ export async function POST(request: Request) {
   const trusted = me && (me.role === "admin" || me.id === hold.user_id);
   const pack = PACKAGES[hold.package_id];
   const base = siteUrl();
+  const tax = taxOn();
 
   const session = await stripe().checkout.sessions.create(
     {
@@ -67,11 +68,14 @@ export async function POST(request: Request) {
           price_data: {
             currency: currency(),
             unit_amount: toMinor(hold.amount),
+            ...(tax ? { tax_behavior: "exclusive" as const } : {}),
             product_data: { name: `LiftPage ${pack?.name ?? "campaign"}`, description: pack?.deliver },
           },
         },
       ],
       ...(trusted ? { customer_email: hold.email } : {}),
+      // Tax needs the buyer's address; Checkout asks for it when tax is on.
+      ...(tax ? { automatic_tax: { enabled: true }, billing_address_collection: "required" as const } : {}),
       success_url: `${base}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${base}/checkout/cancel?hold=${encodeURIComponent(hold.id)}`,
       // Short-lived, so a stale tab can't pay long after the request changed.

@@ -23,7 +23,7 @@ export default async function UsersPage() {
         <p className={`${KICKER} text-accent`}>Users</p>
         <h1 className="mt-3 display text-5xl md:text-6xl">Who gets in.</h1>
         <p className="mt-3 text-muted">
-          Admin is locked to the owner account; everyone else is a client. Self sign-up is {signupOpen() ? "open: anyone can make a client account" : "closed"}. Set{" "}
+          Admin is locked to the three owner accounts; everyone else is a client. Self sign-up is {signupOpen() ? "open: anyone can make a client account" : "closed"}. Set{" "}
           <code className="font-mono text-sm">LIFTPAGE_OPEN_SIGNUP</code> to change it.
         </p>
       </section>

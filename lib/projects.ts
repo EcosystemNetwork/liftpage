@@ -222,6 +222,12 @@ export async function recordSubscription(
   return rows.length > 0;
 }
 
+/** The Stripe customer behind a client's plan, once checkout has made one. Server only. */
+export async function planCustomer(clientId: string): Promise<string | null> {
+  const row = must(await db().from("plans").select("stripe_customer_id").eq("client_id", clientId).maybeSingle(), "plan customer") as Row | null;
+  return (row?.stripe_customer_id as string | null | undefined) ?? null;
+}
+
 export async function planBySubscription(subscriptionId: string): Promise<string | null> {
   const row = must(await db().from("plans").select("client_id").eq("stripe_subscription_id", subscriptionId).maybeSingle(), "find plan") as Row | null;
   return (row?.client_id as string | undefined) ?? null;

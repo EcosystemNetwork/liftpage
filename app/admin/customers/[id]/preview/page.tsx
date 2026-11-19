@@ -15,6 +15,10 @@ import { loadSuite } from "@/lib/projects";
 import { boardForClient, connectionsFor, holdsFor } from "@/lib/store";
 import { db, must } from "@/lib/supabase/server";
 import { KICKER } from "@/lib/ui";
+import { ClientServices, WorkLog } from "@/components/ClientServices";
+import { loadServices } from "@/lib/services-load";
+import { Calendar, MonthRecap, Wins } from "@/components/Recap";
+import { calendar, monthRecap, wins } from "@/lib/recap";
 
 export const metadata = { title: "Client view" };
 
@@ -37,6 +41,7 @@ export default async function PreviewPage({ params }: PageProps<"/admin/customer
   ]);
   const metrics = (must(rows, "load numbers") ?? []).map(toMetric);
   const connections = board ? await connectionsFor(board.brand.id) : [];
+  const work = await loadServices({ user, board, connections, metrics, projects: suite.projects });
 
   return (
     <>
@@ -51,6 +56,15 @@ export default async function PreviewPage({ params }: PageProps<"/admin/customer
         <h1 className="mt-3 display text-5xl">{user.name}</h1>
       </section>
 
+      <section aria-labelledby="services">
+        <h2 id="services" className="mb-4 display text-3xl">
+          What we&rsquo;re doing for them
+        </h2>
+        <ClientServices services={work.services} changes={suite.changes} preview />
+      </section>
+
+      <Wins wins={wins(metrics)} />
+
       <ClientOverview
         company={user.company}
         since={user.createdAt}
@@ -60,6 +74,20 @@ export default async function PreviewPage({ params }: PageProps<"/admin/customer
         data={overview({ metrics, posts: board?.posts ?? [], connections, platforms: board?.brand.platforms ?? [] })}
         preview
       />
+
+      <section aria-labelledby="month">
+        <h2 id="month" className="mb-4 display text-3xl">
+          Their month with LiftPage
+        </h2>
+        <MonthRecap recap={monthRecap({ posts: board?.posts ?? [], changes: suite.changes, metrics, now: new Date() })} />
+      </section>
+
+      <section aria-labelledby="work-log" className="max-w-3xl">
+        <h2 id="work-log" className="mb-4 display text-3xl">
+          Lately
+        </h2>
+        <WorkLog items={work.log} />
+      </section>
 
       <section aria-labelledby="projects">
         <h2 id="projects" className="mb-4 display text-3xl">
@@ -89,6 +117,7 @@ export default async function PreviewPage({ params }: PageProps<"/admin/customer
         <h2 id="board" className="mb-4 display text-3xl">
           Their board
         </h2>
+        {board ? <div className="mb-6"><Calendar days={calendar(board.posts, new Date())} /></div> : null}
         {board ? (
           <ClientBoard brand={board.brand} posts={board.posts} preview />
         ) : (

@@ -235,7 +235,16 @@ function PlanCard({ plan, preview, payments, notice }: { plan: Plan; preview: bo
             </p>
           </form>
         ) : plan.subscribed ? (
-          <p className="text-xs text-muted">Card on file. Questions about billing? Send us a message.</p>
+          !preview && payments ? (
+            <form action="/api/stripe/portal" method="post">
+              <button type="submit" className={plan.status === "past_due" ? "btn-primary w-full" : "btn-ghost w-full"}>
+                {plan.status === "past_due" ? "Update card" : "Manage billing"}
+              </button>
+              <p className="mt-2 text-xs text-muted md:text-left">Change your card, get invoices, or cancel, through Stripe.</p>
+            </form>
+          ) : (
+            <p className="text-xs text-muted">Card on file. Questions about billing? Send us a message.</p>
+          )
         ) : null}
       </div>
     </article>

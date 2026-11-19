@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { openBoard, reviewPost, syncNow } from "@/app/actions/boards";
+import { approveAllMine, openBoard, reviewPost, syncNow } from "@/app/actions/boards";
 import { PLATFORM_NAME, PLATFORMS, type Status } from "@/lib/types";
 import { INPUT, LABEL } from "@/lib/ui";
 import { Message, RowButton, Submit } from "./forms";
@@ -95,6 +95,27 @@ export function SyncButton({ userId }: { userId?: string }) {
     <form action={action} className="grid gap-2">
       {userId ? <input type="hidden" name="userId" value={userId} /> : null}
       <RowButton>Sync now</RowButton>
+      <Message state={state} />
+    </form>
+  );
+}
+
+/** Client: one press approves every post waiting on them. `count` guards against approving drafts they haven't seen. */
+export function ApproveAll({ count }: { count: number }) {
+  const [state, action] = useActionState(approveAllMine, undefined);
+  if (state?.ok) return <Message state={state} />;
+  return (
+    <form
+      action={action}
+      onSubmit={(e) => {
+        if (!confirm(`Approve all ${count} ${count === 1 ? "post" : "posts"} waiting for you?`)) e.preventDefault();
+      }}
+      className="grid gap-2"
+    >
+      <input type="hidden" name="count" value={count} />
+      <Submit busy="Approving" className="justify-self-start">
+        Looks good, approve all {count}
+      </Submit>
       <Message state={state} />
     </form>
   );

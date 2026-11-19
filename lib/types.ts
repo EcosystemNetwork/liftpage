@@ -91,6 +91,8 @@ export type Hold = {
   /** Set by the Stripe webhook once the deposit clears. */
   amountPaid?: number;
   paidAt?: string;
+  /** A Stripe invoice has been sent for this request. */
+  invoiced?: boolean;
   /** What the client wants from the campaign, when they started it from their account. */
   brief?: string;
 };

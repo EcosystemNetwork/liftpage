@@ -27,6 +27,11 @@ import { loadSuite } from "@/lib/projects";
 import { stripeReady } from "@/lib/stripe";
 import { KICKER } from "@/lib/ui";
 import { GeneralRequests, ProjectSuite } from "@/components/ProjectSuite";
+import { ClientServices, WorkLog } from "@/components/ClientServices";
+import { loadServices } from "@/lib/services-load";
+import { ApproveAll } from "@/components/BoardForms";
+import { Calendar, MonthRecap, Wins } from "@/components/Recap";
+import { calendar, monthRecap, wins } from "@/lib/recap";
 
 export const metadata = { title: "Account" };
 
@@ -49,10 +54,16 @@ export default async function AccountPage({ searchParams }: PageProps<"/account"
   const metrics = (must(rows, "load numbers") ?? []).map(toMetric);
   const connections = board ? await connectionsFor(board.brand.id) : [];
   const synced = connections.length > 0;
+  const work = isClient && suite ? await loadServices({ user, board, connections, metrics, projects: suite.projects }) : null;
   const today = new Date().toISOString().slice(0, 10);
   const toReview = board
     ? board.posts.filter((p) => p.status === "draft" && p.publishState !== "published" && p.publishState !== "publishing").length
     : 0;
+  // What one press can approve: drafts they haven't sent back. Matches approveAllMine.
+  const approvable = board
+    ? board.posts.filter((p) => p.status === "draft" && p.notes.at(-1)?.kind !== "changes" && p.publishState !== "published" && p.publishState !== "publishing").length
+    : 0;
+  const now = new Date();
   // Onboarding: until they've told us about their social accounts, that's a to-do.
   const setupDue = isClient && !setup.length;
 
@@ -110,6 +121,18 @@ export default async function AccountPage({ searchParams }: PageProps<"/account"
               )}
             </section>
 
+            {work ? (
+              <section id="services" aria-labelledby="services-title" className="scroll-mt-20">
+                <h2 id="services-title" className="display text-3xl">
+                  What we&rsquo;re doing for you
+                </h2>
+                <p className="mt-2 mb-4 text-muted">Everything LiftPage runs for you, when it last worked, and when it runs next.</p>
+                <ClientServices services={work.services} changes={suite.changes} />
+              </section>
+            ) : null}
+
+            <Wins wins={wins(metrics)} />
+
             <ClientOverview
               company={user.company}
               since={user.createdAt}
@@ -118,6 +141,24 @@ export default async function AccountPage({ searchParams }: PageProps<"/account"
               projects={suite.projects}
               data={overview({ metrics, posts: board?.posts ?? [], connections, platforms: board?.brand.platforms ?? [] })}
             />
+
+            <section id="month" aria-labelledby="month-title" className="scroll-mt-20">
+              <h2 id="month-title" className="display text-3xl">
+                Your month with LiftPage
+              </h2>
+              <p className="mt-2 mb-4 text-muted">What we&rsquo;ve delivered so far this month.</p>
+              <MonthRecap recap={monthRecap({ posts: board?.posts ?? [], changes: suite.changes, metrics, now })} />
+            </section>
+
+            {work ? (
+              <section id="work-log" aria-labelledby="work-log-title" className="max-w-3xl scroll-mt-20">
+                <h2 id="work-log-title" className="display text-3xl">
+                  Lately
+                </h2>
+                <p className="mt-2 mb-4 text-muted">What we&rsquo;ve done for you, newest first.</p>
+                <WorkLog items={work.log} />
+              </section>
+            ) : null}
 
             <section id="start-campaign" aria-labelledby="campaign-title" className="max-w-3xl scroll-mt-20">
               <h2 id="campaign-title" className="display text-3xl">
@@ -177,6 +218,12 @@ export default async function AccountPage({ searchParams }: PageProps<"/account"
                 Here&rsquo;s what we plan to post for you. Press <strong>Approve</strong> if it looks right, or{" "}
                 <strong>Request changes</strong> and tell us what to fix. We handle the posting.
               </p>
+              {board ? (
+                <div className="mb-6 grid gap-4">
+                  <Calendar days={calendar(board.posts, now)} />
+                  {approvable > 1 ? <ApproveAll count={approvable} /> : null}
+                </div>
+              ) : null}
               {board ? (
                 <ClientBoard brand={board.brand} posts={board.posts} canRedraft={user.tools.includes("redraft")} />
               ) : (

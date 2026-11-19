@@ -64,6 +64,21 @@ export function GeneralChangeForm({ clientId }: { clientId?: string }) {
   );
 }
 
+/** One press asks LiftPage to switch a service on. It lands as an ordinary change request. */
+export function AskForService({ ask, label }: { ask: string; label: string }) {
+  const [state, run] = useActionState(requestGeneralChange, undefined);
+  if (state?.ok) return <p className="text-sm text-accent">Asked. We&rsquo;ll be in touch within one business day.</p>;
+  return (
+    <form action={run} className="grid gap-2">
+      <input type="hidden" name="text" value={ask} />
+      <div>
+        <RowButton>{label}</RowButton>
+      </div>
+      <Message state={state} />
+    </form>
+  );
+}
+
 export function CheckNowButton({ projectId }: { projectId: string }) {
   const [state, run] = useActionState(checkNow, undefined);
   return (

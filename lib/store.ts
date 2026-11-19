@@ -101,6 +101,7 @@ export function toHold(row: Row): Hold {
     note: opt<string>(row.note),
     amountPaid: row.amount_paid == null ? undefined : Number(row.amount_paid),
     paidAt: opt<string>(row.paid_at),
+    invoiced: Boolean(row.stripe_invoice_id),
     brief: (row.brief as string | null) || undefined,
   };
 }
@@ -357,6 +358,20 @@ export async function setHoldAmount(id: string, amount: number): Promise<boolean
     "re-price request",
   ) as Row[];
   return rows.length === 1;
+}
+
+/** Remembers the Stripe invoice sent for an unpaid request. False if it's paid already. */
+export async function setHoldInvoice(id: string, invoiceId: string): Promise<boolean> {
+  const rows = must(
+    await db().from("holds").update({ stripe_invoice_id: invoiceId }).eq("id", id).is("paid_at", null).select("id"),
+    "record invoice",
+  ) as Row[];
+  return rows.length === 1;
+}
+
+export async function holdInvoiceId(id: string): Promise<string | null> {
+  const row = must(await db().from("holds").select("stripe_invoice_id").eq("id", id).maybeSingle(), "load invoice id") as Row | null;
+  return (row?.stripe_invoice_id as string | null | undefined) ?? null;
 }
 
 /** Links every unlinked request from this email to the account. */

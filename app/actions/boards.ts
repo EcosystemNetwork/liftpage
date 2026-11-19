@@ -8,7 +8,9 @@ import { track } from "@/lib/analytics";
 import { requireAdmin, requireUser } from "@/lib/dal";
 import { enqueue } from "@/lib/inngest/client";
 import { syncInsights } from "@/lib/social/insights";
-import { addNote, createBoard, loadBrand, loadPost, retireCue, updatePost } from "@/lib/store";
+import { addNote, boardForClient, createBoard, loadBrand, loadPost, retireCue, updatePost } from "@/lib/store";
+import { notifyAddress, sendMail } from "@/lib/email";
+import { siteUrl } from "@/lib/site";
 import { mailClientReview } from "@/lib/review-mail";
 import { NOTE_KINDS, PLATFORMS, type NoteKind, type Platform } from "@/lib/types";
 import type { FormState } from "./auth";
@@ -68,6 +70,45 @@ export async function reviewPost(_: FormState, data: FormData): Promise<FormStat
   after(() => mailClientReview(post, found.brandId, kind, note, me.name || me.email));
   revalidatePath("/account");
   return { ok: kind === "approved" ? "Approved." : kind === "changes" ? "Sent back with your note." : "Comment saved." };
+}
+
+/**
+ * Client: approves every draft on their own board in one go. Lines they sent back stay
+ * drafts (they're waiting on LiftPage). LiftPage gets one email, not one per post.
+ */
+export async function approveAllMine(_: FormState, data: FormData): Promise<FormState> {
+  const me = await requireUser();
+  if (me.role !== "client") return { error: "Admins approve on the desk." };
+  const board = await boardForClient(me.id);
+  const expected = Number(text(data, "count", 6));
+  const drafts = (board?.posts ?? []).filter(
+    (p) => p.status === "draft" && p.notes.at(-1)?.kind !== "changes" && p.publishState !== "published" && p.publishState !== "publishing",
+  );
+  if (!board || !drafts.length) return { error: "Nothing waiting for you." };
+  // New drafts arrived since the page loaded: show them first rather than approve unseen posts.
+  if (expected && drafts.length !== expected) {
+    revalidatePath("/account");
+    return { error: `There are ${drafts.length} drafts now, not ${expected}. Reload to see the new ones first.` };
+  }
+  for (const post of drafts) {
+    await updatePost(post.id, { status: "approved" });
+    await addNote({ postId: post.id, authorId: me.id, authorName: me.name || me.email, role: me.role, kind: "approved", text: "" });
+  }
+  await track(me.id, "post_reviewed", { kind: "approved", bulk: drafts.length });
+  const to = notifyAddress();
+  if (to) {
+    after(() =>
+      sendMail({
+        to,
+        subject: `${board.brand.name} approved ${drafts.length} ${drafts.length === 1 ? "post" : "posts"}`,
+        lines: [`${me.name || me.email} approved everything waiting on their board. They're ready to schedule.`],
+        action: { label: "Open the board", url: `${siteUrl()}/desk?board=${encodeURIComponent(board.brand.id)}` },
+      }).catch((error) => console.error("approve all mail", error)),
+    );
+  }
+  revalidatePath("/account");
+  revalidatePath("/admin", "layout");
+  return { ok: `Approved ${drafts.length} ${drafts.length === 1 ? "post" : "posts"}. We'll take it from here.` };
 }
 
 /** Pulls network numbers for a client now. Admins for anyone; clients for themselves. */
