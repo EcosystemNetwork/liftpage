@@ -213,6 +213,8 @@ function prompt(brand: Brand, brief: string): string {
 export async function cutWeek(
   brief: string,
   brand: Brand,
+  /** review: false skips HarnessRouter's second "tighten" pass, halving the time (campaign steps run under a host time limit). */
+  options: { review?: boolean } = {},
 ): Promise<{ posts: Post[]; via: CutVia; note: string }> {
   const slots = futureSlots(8);
   const notes: string[] = [];
@@ -243,7 +245,7 @@ export async function cutWeek(
     }
   }
 
-  if (drafts && harnessReady() && via !== "local") {
+  if (drafts && options.review !== false && harnessReady() && via !== "local") {
     try {
       const reviewed = parsePosts(
         await askHarnessRouter(

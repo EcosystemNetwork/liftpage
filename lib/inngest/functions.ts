@@ -11,6 +11,9 @@ import { refresh } from "../social/oauth";
 import { publishPost } from "../social/publish";
 import { db } from "../supabase/server";
 import type { Platform } from "../types";
+import { beginCampaign, contentStart, finishStage, newsletterStage, postsStage, researchStage, strategyStage } from "../agents/run";
+import type { Cut, Letter } from "../agents/content";
+import type { Research, Strategy } from "../agents/parse";
 import { inngest } from "./client";
 
 /**
@@ -143,4 +146,36 @@ export const siteChecks = inngest.createFunction(
   },
 );
 
-export const functions = [publishAtSlot, holdCreated, insightsSync, housekeeping, weeklyReports, siteChecks];
+/**
+ * A Growth OS campaign, one step per model call so each fits the host's function time
+ * limit (Netlify cuts a request off at about a minute). Stages write their own failures
+ * and return null, so a failed agent ends the run cleanly instead of retrying. Retries
+ * here only cover a step that was cut off mid-flight.
+ */
+export const campaignRun = inngest.createFunction(
+  {
+    id: "campaign-run",
+    retries: 1,
+    concurrency: { limit: 3 },
+    idempotency: "event.data.campaignId",
+    triggers: [{ event: "liftpage/campaign.requested" }],
+  },
+  async ({ event, step }) => {
+    const { campaignId } = event.data as { campaignId: string };
+    if (!(await step.run("begin", () => beginCampaign(campaignId)))) return { skipped: "not queued" };
+    const research = (await step.run("research", () => researchStage(campaignId))) as Research | null;
+    if (!research) return { stopped: "research" };
+    const strategy = (await step.run("strategy", () => strategyStage(campaignId, research))) as Strategy | null;
+    if (!strategy) return { stopped: "strategy" };
+    await step.run("content-start", () => contentStart(campaignId));
+    const [cut, letter] = (await Promise.all([
+      step.run("content-posts", () => postsStage(campaignId, research, strategy)),
+      step.run("content-newsletter", () => newsletterStage(campaignId, research, strategy)),
+    ])) as [Cut | null, Letter];
+    if (!cut) return { stopped: "content" };
+    const postIds = await step.run("content-save", () => finishStage(campaignId, research, strategy, cut, letter));
+    return { posts: postIds?.length ?? 0 };
+  },
+);
+
+export const functions = [publishAtSlot, holdCreated, insightsSync, housekeeping, weeklyReports, siteChecks, campaignRun];

@@ -12,6 +12,7 @@ export type Events = {
   "liftpage/post.cued": { postId: string; cueId: string; slot: string };
   "liftpage/hold.created": { holdId: string };
   "liftpage/insights.sync": { userId: string };
+  "liftpage/campaign.requested": { campaignId: string };
 };
 
 /**

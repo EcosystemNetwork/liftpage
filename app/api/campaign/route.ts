@@ -1,6 +1,7 @@
 import { after } from "next/server";
 import { logEvent } from "@/lib/admin";
 import { runCampaign } from "@/lib/agents/run";
+import { enqueue } from "@/lib/inngest/client";
 import { createCampaign, finishCampaign, latestCampaign } from "@/lib/campaigns";
 import { adminOrResponse } from "@/lib/dal";
 import { limited } from "@/lib/rate";
@@ -53,13 +54,18 @@ export async function POST(request: Request) {
     competitors: competitors.map((item) => item!.toString()),
   });
   await logEvent(admin, "started campaign", brand.clientId, `${url.hostname} on ${brand.name}`);
-  after(async () => {
-    try {
-      await runCampaign(campaign.id);
-    } catch (error) {
-      console.error("campaign run", error);
-      await finishCampaign(campaign.id, "failed").catch(() => undefined);
-    }
-  });
+  // With Inngest, each agent gets its own request (and time limit). Without it (local dev),
+  // the whole run happens after this response, inside this route's maxDuration.
+  const queued = await enqueue("liftpage/campaign.requested", { campaignId: campaign.id }, campaign.id);
+  if (!queued) {
+    after(async () => {
+      try {
+        await runCampaign(campaign.id);
+      } catch (error) {
+        console.error("campaign run", error);
+        await finishCampaign(campaign.id, "failed").catch(() => undefined);
+      }
+    });
+  }
   return Response.json({ campaign }, { status: 202 });
 }
