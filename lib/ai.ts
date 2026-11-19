@@ -1,4 +1,5 @@
 import "server-only";
+import { recordUsage } from "./usage";
 
 /*
  * The two model backends. TokenRouter is an OpenAI-compatible chat API; HarnessRouter runs
@@ -93,7 +94,9 @@ async function postJson(url: string, key: string, body: unknown, label: string):
     throw new Error(`${label} ${response.status}: ${detail}`);
   }
   try {
-    return textFromUnknown(JSON.parse(raw)) || raw;
+    const parsed = JSON.parse(raw) as unknown;
+    recordUsage(label, parsed);
+    return textFromUnknown(parsed) || raw;
   } catch {
     return raw;
   }

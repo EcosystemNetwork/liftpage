@@ -1,3 +1,4 @@
+import type { Usage } from "./usage-format";
 export const PLATFORMS = ["x", "instagram", "tiktok", "linkedin", "youtube"] as const;
 
 export type Platform = (typeof PLATFORMS)[number];
@@ -309,6 +310,8 @@ export type AgentStep = {
   note: string;
   output?: unknown;
   error?: string;
+  /** Model calls, tokens and cost for this step. Missing on steps from before tracking. */
+  usage?: Usage;
 };
 
 export type CampaignStatus = "queued" | "running" | "ready" | "failed";
@@ -325,4 +328,6 @@ export type Campaign = {
   finishedAt?: string;
   postIds: string[];
   steps: AgentStep[];
+  /** The steps' usage added up. */
+  usage: Usage;
 };

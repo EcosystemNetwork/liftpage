@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Distribution } from "@/lib/agents/distribution";
 import type { Analysis, Community, Research, Strategy } from "@/lib/agents/parse";
 import { AGENT_ROSTER } from "@/lib/agents/roster";
+import { usageLabel } from "@/lib/usage-format";
 import { PLATFORM_NAME, type AgentStep, type Campaign, type Platform, type StepStatus } from "@/lib/types";
 
 const VIA_NAME: Record<string, string> = {
@@ -179,6 +180,7 @@ export function CampaignCommand({ brandId, onDrafts }: { brandId: string; onDraf
               : campaign.status === "failed"
                 ? "stopped"
                 : "running"}
+            {campaign.usage?.calls ? <> · AI spend {usageLabel(campaign.usage)}</> : null}
           </p>
           <ol className="mt-3 grid gap-2">
             {AGENT_ROSTER.map((agent, index) => {
@@ -194,6 +196,7 @@ export function CampaignCommand({ brandId, onDrafts }: { brandId: string; onDraf
                     </span>
                     {step ? <span className="eyebrow text-muted tabular-nums">{seconds(step, now)}</span> : null}
                     {step?.via ? <span className="eyebrow text-muted">{VIA_NAME[step.via] ?? step.via}</span> : null}
+                    {step?.usage?.calls ? <span className="eyebrow text-muted tabular-nums">{usageLabel(step.usage)}</span> : null}
                   </div>
                   <p className="mt-1 text-sm text-muted">{step?.error ? <span className="text-danger">{step.error}</span> : step?.note || agent.job}</p>
                   {step?.status === "done" && step.output ? <StepOutput agent={agent.id} output={step.output} /> : null}
