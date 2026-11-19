@@ -5,3 +5,6 @@
   # invalidation). It is never deployed, so exclude it from secrets scanning.
   # Client/server output (.next/static, .next/server) is still scanned.
   SECRETS_SCAN_OMIT_PATHS = ".netlify/.next/cache/**,.next/cache/**"
+  # SECRETS_SCAN_OMIT_PATHS is also set (as secret) in the Netlify UI, so its
+  # value matching this file trips the scanner. It's not a real secret.
+  SECRETS_SCAN_OMIT_KEYS = "SECRETS_SCAN_OMIT_PATHS"
