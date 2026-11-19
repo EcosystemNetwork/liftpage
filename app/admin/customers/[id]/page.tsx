@@ -11,7 +11,9 @@ import {
   setStage,
 } from "@/app/actions/clients";
 import { OpenBoardForm, SyncButton } from "@/components/BoardForms";
-import { DraftWeekForm, NoteForm, ToolButton } from "@/components/ClientTools";
+import { ClientToolsForm, DraftWeekForm, NoteForm, ToolButton } from "@/components/ClientTools";
+import { aiReady } from "@/lib/ai";
+import { CLIENT_TOOLS } from "@/lib/tools";
 import { CustomerStats } from "@/components/CustomerStats";
 import { RowButton } from "@/components/forms";
 import { FlagList } from "@/components/FlagList";
@@ -80,12 +82,12 @@ export default async function CustomerPage({ params }: PageProps<"/admin/custome
             <RowButton>Set</RowButton>
           </form>
           {board || suite.projects.length || suite.plan ? (
-            <Link href={`/admin/customers/${user.id}/preview`} className={`${KICKER} inline-flex min-h-10 items-center border border-line px-3 text-ink`}>
+            <Link href={`/admin/customers/${user.id}/preview`} className={`btn-ghost`}>
               See what they see
             </Link>
           ) : null}
           {board ? (
-            <Link href={`/desk?board=${board.brand.id}`} className={`${KICKER} inline-flex min-h-10 items-center border border-line px-3 text-ink`}>
+            <Link href={`/desk?board=${board.brand.id}`} className={`btn-ghost`}>
               Open on the desk
             </Link>
           ) : null}
@@ -119,7 +121,7 @@ export default async function CustomerPage({ params }: PageProps<"/admin/custome
         </p>
         {board ? (
           <div className="grid gap-6">
-            <div className="max-w-2xl border border-line p-4">
+            <div className="max-w-2xl panel p-5">
               <DraftWeekForm clientId={user.id} brandName={board.brand.name} />
             </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -167,6 +169,23 @@ export default async function CustomerPage({ params }: PageProps<"/admin/custome
             Networks: {connections.length ? connections.map((c) => `${PLATFORM_NAME[c.platform]} ${c.accountName}`).join(", ") : "none connected. Connect them on the desk."}
           </p>
         ) : null}
+      </section>
+
+      <section aria-labelledby="client-tools">
+        <h2 id="client-tools" className="mb-1 display text-3xl">
+          Client&rsquo;s AI tools
+        </h2>
+        <p className="mb-4 text-sm text-muted">
+          What {user.company || user.name} can run themselves from their account, on their own board only. Anything they make lands as a draft for review; nothing
+          is scheduled without an approval. {user.tools.length ? `${user.tools.length} on.` : "All off."} Every use shows in the activity log.
+        </p>
+        {board ? (
+          <div className="panel p-5">
+            <ClientToolsForm clientId={user.id} tools={CLIENT_TOOLS} on={user.tools} ready={aiReady()} />
+          </div>
+        ) : (
+          <p className="text-muted">Open a board first. The tools work on the client&rsquo;s board.</p>
+        )}
       </section>
 
       <div className="grid gap-12 lg:grid-cols-2 [&>*]:min-w-0">

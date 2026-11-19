@@ -135,7 +135,7 @@ function ProjectCard({ project, changes, social, preview }: { project: Project; 
 
       {preview ? null : (
         <details className="group">
-          <summary className={`${KICKER} cursor-pointer text-accent`}>Request a change</summary>
+          <summary className="btn-ghost btn-sm cursor-pointer list-none [&::-webkit-details-marker]:hidden">Ask for a change</summary>
           <div className="mt-3">
             <ChangeForm projectId={project.id} kind={project.kind} />
           </div>

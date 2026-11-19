@@ -1,9 +1,22 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { changePassword, forgotPassword, login, setPassword, signup } from "@/app/actions/auth";
 import { INPUT, LABEL } from "@/lib/ui";
 import { Message, Submit } from "./forms";
+
+/** A password box with a Show/Hide button, so nobody has to type blind. */
+function PasswordInput({ name = "password", autoComplete, minLength }: { name?: string; autoComplete: string; minLength?: number }) {
+  const [shown, setShown] = useState(false);
+  return (
+    <span className="flex gap-2">
+      <input name={name} type={shown ? "text" : "password"} autoComplete={autoComplete} minLength={minLength} required className={INPUT} />
+      <button type="button" onClick={() => setShown(!shown)} aria-pressed={shown} className="btn-ghost shrink-0">
+        {shown ? "Hide" : "Show"}
+      </button>
+    </span>
+  );
+}
 
 export function LoginForm({ next }: { next?: string }) {
   const [state, action] = useActionState(login, undefined);
@@ -16,7 +29,7 @@ export function LoginForm({ next }: { next?: string }) {
       </label>
       <label className={LABEL}>
         Password
-        <input name="password" type="password" autoComplete="current-password" required className={INPUT} />
+        <PasswordInput autoComplete="current-password" />
       </label>
       <Message state={state} />
       <Submit busy="Signing in" className="justify-self-start">
@@ -46,8 +59,8 @@ export function SignupForm() {
       </label>
       <label className={LABEL}>
         Password
-        <input name="password" type="password" autoComplete="new-password" minLength={10} required className={INPUT} />
-        <span className="text-xs text-muted">Ten characters or more.</span>
+        <PasswordInput autoComplete="new-password" minLength={8} />
+        <span className="text-sm text-muted">At least 8 letters or numbers.</span>
       </label>
       <Message state={state} />
       <Submit busy="Creating" className="justify-self-start">
@@ -63,11 +76,11 @@ export function PasswordForm() {
     <form action={action} className="grid gap-4">
       <label className={LABEL}>
         Current password
-        <input name="current" type="password" autoComplete="current-password" required className={INPUT} />
+        <PasswordInput name="current" autoComplete="current-password" />
       </label>
       <label className={LABEL}>
         New password
-        <input name="password" type="password" autoComplete="new-password" minLength={10} required className={INPUT} />
+        <PasswordInput autoComplete="new-password" minLength={8} />
       </label>
       <Message state={state} />
       <Submit busy="Saving" className="justify-self-start">
@@ -83,8 +96,8 @@ export function SetPasswordForm() {
     <form action={action} className="grid gap-4">
       <label className={LABEL}>
         New password
-        <input name="password" type="password" autoComplete="new-password" minLength={10} required className={INPUT} />
-        <span className="text-xs text-muted">Ten characters or more.</span>
+        <PasswordInput autoComplete="new-password" minLength={8} />
+        <span className="text-sm text-muted">At least 8 letters or numbers.</span>
       </label>
       <Message state={state} />
       <Submit busy="Saving" className="justify-self-start">

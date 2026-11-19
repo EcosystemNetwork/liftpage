@@ -10,6 +10,7 @@ import {
   reachableClients,
   sendReport,
   setStage as saveStage,
+  setTools as saveTools,
   type ReportOutcome,
 } from "@/lib/admin";
 import { setPostStatus } from "@/lib/cue";
@@ -21,6 +22,7 @@ import { addMessage, mailMessage, MESSAGE_MAX } from "@/lib/messages";
 import { mailReadyForReview } from "@/lib/review-mail";
 import { syncableClients, syncInsights } from "@/lib/social/insights";
 import { addNote, addRun, boardForClient, retireCue, updatePost } from "@/lib/store";
+import { CLIENT_TOOLS, cleanTools } from "@/lib/tools";
 import { CLIENT_STAGES, type ClientStage, type User } from "@/lib/types";
 import type { FormState } from "./auth";
 
@@ -80,6 +82,27 @@ export async function changeNote(data: FormData) {
   if (!clientId) return;
   if (how === "delete") await logEvent(me, "note deleted", clientId);
   refresh(clientId);
+}
+
+/** Switches the client's AI tools on or off. The form sends every ticked box as "tool". */
+export async function setClientTools(_: FormState, data: FormData): Promise<FormState> {
+  const got = await forClient(data);
+  if ("error" in got) return got;
+  const next = cleanTools(data.getAll("tool"));
+  const before = new Set(got.client.tools);
+  const on = next.filter((id) => !before.has(id));
+  const off = got.client.tools.filter((id) => !next.includes(id as never));
+  if (!on.length && !off.length) return { ok: "No change." };
+  try {
+    await saveTools(got.client.id, next);
+  } catch (error) {
+    console.error("set tools", error);
+    return { error: "The tools didn't save. Try again." };
+  }
+  const name = (id: string) => CLIENT_TOOLS.find((t) => t.id === id)?.label ?? id;
+  await logEvent(got.me, "tools", got.client.id, [on.length ? `on: ${on.map(name).join(", ")}` : "", off.length ? `off: ${off.map(name).join(", ")}` : ""].filter(Boolean).join("; "));
+  refresh(got.client.id);
+  return { ok: next.length ? `${plural(next.length, "tool")} on for ${got.client.company || got.client.name}.` : "Every tool is off." };
 }
 
 /* ---------- Content ---------- */

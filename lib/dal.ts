@@ -63,6 +63,9 @@ export async function adminOrResponse(): Promise<User | Response> {
 /** Only same-site paths, so ?next= can't bounce someone off the site. */
 export function safeNext(value: unknown, fallback: string): string {
   if (typeof value !== "string") return fallback;
-  if (!value.startsWith("/") || value.startsWith("//") || value.startsWith("/\\")) return fallback;
-  return value;
+  // URL parsing drops tabs and newlines, so "/\t/evil.com" would become "//evil.com".
+  if (/[\u0000-\u001f\u007f\\]/.test(value)) return fallback;
+  if (!value.startsWith("/") || value.startsWith("//")) return fallback;
+  const base = "http://same.invalid";
+  return new URL(value, base).origin === base ? value : fallback;
 }

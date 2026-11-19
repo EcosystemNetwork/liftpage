@@ -80,6 +80,19 @@ export async function setStage(clientId: string, stage: ClientStage) {
   must(await db().from("profiles").update({ stage }).eq("id", clientId).eq("role", "client"), "set stage");
 }
 
+/** Replaces the client's AI tools. Ids are cleaned by the caller. */
+export async function setTools(clientId: string, tools: string[]) {
+  const { error } = await db().from("profiles").update({ tools }).eq("id", clientId).eq("role", "client");
+  if (!error) return;
+  // No profiles.tools column yet (Postgres 42703): keep them in Auth app_metadata instead.
+  if (error.code !== "42703" && !/tools/.test(error.message)) throw new Error(`set tools: ${error.message}`);
+  const found = await db().auth.admin.getUserById(clientId);
+  if (found.error) throw new Error(`set tools: ${found.error.message}`);
+  const meta = (found.data.user?.app_metadata ?? {}) as Record<string, unknown>;
+  const saved = await db().auth.admin.updateUserById(clientId, { app_metadata: { ...meta, tools } });
+  if (saved.error) throw new Error(`set tools: ${saved.error.message}`);
+}
+
 /* ---------- Health across the book ---------- */
 
 type PostLite = ClientSnapshot["posts"][number] & { id: string; platform: Platform; publishedAt?: string };

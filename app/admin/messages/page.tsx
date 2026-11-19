@@ -27,7 +27,7 @@ export default async function MessagesPage() {
 
       <section aria-label="Threads">
         {inbox.length ? (
-          <ul className="grid border border-line">
+          <ul className="grid overflow-hidden panel">
             {inbox.map(({ client, last, unread: count, total }) => (
               <li key={client.id} className="border-b border-line last:border-0">
                 <Link href={`/admin/customers/${client.id}#messages`} className="grid gap-1 px-4 py-3 hover:bg-line/40">

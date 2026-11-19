@@ -17,11 +17,11 @@ const SERVICES = [
   ["Event marketing", "The week before, the day of, and the recap after."],
   ["Community growth", "Discord, X, and LinkedIn, where the people already are."],
   ["Founder branding", "A person on a cadence, in their own voice."],
-  ["AI content production", "Drafts, cuts, and graphics. A person approves before anything goes live."],
+  ["AI content production", "Drafts, cuts, and graphics from agents on HarnessRouter. A person approves before anything goes live."],
   ["Influencer outreach", "Creators and communities who already hold the room."],
   ["Growth analytics", "Reach, replies, leads, and what turned into a customer."],
   ["Paid social", "Boosts and ads on the posts already working. Ad spend is billed at cost."],
-  ["Livestream and podcast", "Demo days, panels, and interviews, run live and cut into clips after."],
+  ["Livestream and podcast", "Launches, panels, and interviews, run live and cut into clips after."],
   ["Email and newsletters", "The list you own, written on the same calendar as the posts."],
   ["Launch pages", "One page for the launch or the event, built to take the sign-up."],
   ["Press and announcements", "The release, the media list, and the post that goes out the same hour."],
@@ -30,43 +30,49 @@ const SERVICES = [
 const POSTS = [
   {
     platform: "X",
-    handle: "@HARNESSROUTER",
-    hook: "Day one. Build in public.",
-    caption: "The Big Hack is in the build week. Stanford and Berkeley. Demo day is Friday. Today we show the teams, not the logo.",
+    handle: "@YOURCOMPANY",
+    hook: "Launch day is Thursday.",
+    caption: "Three days out. Today we show the problem, not the logo. Tomorrow, the product.",
   },
   {
     platform: "Instagram",
-    handle: "@HARNESSROUTER",
-    hook: "Three teams. Three sentences.",
-    caption: "Build in public, day one. Three teams. One sentence each. No pitch deck. Demo day Friday.",
+    handle: "@YOURCOMPANY",
+    hook: "One product. Three sentences.",
+    caption: "What it does, who it's for, why now. No pitch deck.",
   },
   {
     platform: "TikTok",
-    handle: "@HARNESSROUTER",
+    handle: "@YOURCOMPANY",
     hook: "What are you actually building?",
     caption: "Founder, one take, no intro. First frame is the question. Cut when they name the product.",
   },
   {
     platform: "LinkedIn",
-    handle: "HarnessRouter Labs",
-    hook: "The weekend ends. The list doesn't.",
-    caption: "Demo day closes the hack. It should not close the room. Monday, people should still be able to point at the product.",
+    handle: "Your Company",
+    hook: "Launch week ends. The list doesn't.",
+    caption: "Launch day gets the spike. The follow-up gets the customers. Monday, people should still be able to point at the product.",
   },
 ];
 
 const DAYS = [
-  ["Nov 17", "Build in public", "Team intros, founder lines, a countdown."],
-  ["Nov 18", "Product", "Previews, a product demo, reactions from the room."],
-  ["Nov 19", "Competition", "Prize pool, judges, mentors, last call."],
-  ["Nov 20", "Demo day", "Livestream, finalists, winners, the recap."],
+  ["Mon", "Teaser", "The problem, a founder line, a countdown."],
+  ["Tue", "Product", "The demo, the first users, what it replaces."],
+  ["Wed", "Launch", "The launch post, the thread, the livestream."],
+  ["Thu", "Recap", "Reactions, clips, and the follow-up."],
 ];
 
 const CLIENTS = [
   "AI startups launching a product",
-  "Hackathon organizers",
-  "Funds and accelerators",
-  "Technology conferences",
   "Founders building a personal brand",
+  "Funds and accelerators",
+  "Technology conferences and events",
+  "Developer and builder communities",
+];
+
+const ENGINE = [
+  ["Brief to week", "Give us the launch. Agents on HarnessRouter draft every post, for every network on the calendar."],
+  ["Second pass", "Another agent run tightens the cut. Same facts, fewer words, the voice of the brand."],
+  ["A person signs off", "Nothing publishes on its own. We read, edit, and approve every post before it goes live."],
 ];
 
 const RATE_ORDER: PackageId[] = ["starter", "growth", "accelerator", "event"];
@@ -93,7 +99,7 @@ export default function HomePage() {
             <div className="rise">
               <p className="eyebrow inline-flex items-center gap-2 text-muted">
                 <span className="size-1.5 rounded-full bg-accent" aria-hidden="true" />
-                Digital media marketing
+                Digital media marketing · Built on HarnessRouter
               </p>
               <h1 className="display mt-6 text-[3.5rem] sm:text-7xl lg:text-[6.5rem]">
                 Attention
@@ -104,7 +110,7 @@ export default function HomePage() {
                 We run digital media for companies creating the future. Posts, short video, and the campaign around a launch.
               </p>
               <p className="mt-3 max-w-md leading-relaxed text-muted">
-                Startups, founders, hackathons, and innovation communities. Instagram, TikTok, X, LinkedIn, and YouTube.
+                Startups, founders, funds, and the communities around them. Instagram, TikTok, X, LinkedIn, and YouTube.
               </p>
               <div className="mt-10 flex flex-wrap gap-3">
                 <Link href="/#start" className="btn-primary">
@@ -119,16 +125,16 @@ export default function HomePage() {
 
             <aside className="rise rise-2 panel relative overflow-hidden shadow-card">
               <div className="flex items-center justify-between border-b border-dashed border-line px-5 py-3">
-                <p className="eyebrow text-muted">On the calendar</p>
-                <p className="eyebrow text-accent">Nov 17–20</p>
+                <p className="eyebrow text-muted">A launch week</p>
+                <p className="eyebrow text-accent">4 days</p>
               </div>
               <div className="p-5 md:p-6">
-                <h2 className="display text-4xl">The Big Hack</h2>
+                <h2 className="display text-4xl">Launch week</h2>
                 <p className="mt-3 leading-relaxed">
-                  A four-day social campaign for HarnessRouter Labs. Stanford and Berkeley. November 17–20.
+                  Four days of social around one launch, on every network you run.
                 </p>
                 <p className="mt-3 text-sm leading-relaxed text-muted">
-                  Recruit the room, show what people are building, and leave HarnessRouter known on Monday.
+                  Build the room before launch day, show the product on it, and keep people talking after.
                 </p>
                 <ol className="mt-6 grid grid-cols-4 gap-1.5" aria-label="Campaign days">
                   {DAYS.map(([day, title], i) => (
@@ -138,9 +144,9 @@ export default function HomePage() {
                     </li>
                   ))}
                 </ol>
-                <a href="https://luma.com/t2598jt6" className="link mt-6 inline-flex min-h-10 items-center text-sm font-medium">
-                  Event page ↗
-                </a>
+                <Link href="/#work" className="link mt-6 inline-flex min-h-10 items-center text-sm font-medium">
+                  See a sample week →
+                </Link>
               </div>
             </aside>
           </div>
@@ -182,15 +188,42 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* Engine */}
+        <section id="engine" className="scroll-mt-20 border-b border-line">
+          <div className="mx-auto grid max-w-6xl gap-8 px-4 py-16 md:px-8 md:py-24 lg:grid-cols-[16rem_minmax(0,1fr)]">
+            <SectionHead index="03" title="Built on HarnessRouter">
+              The AI behind the work.
+            </SectionHead>
+            <div>
+              <p className="display max-w-2xl text-3xl md:text-4xl">
+                Every campaign starts on HarnessRouter.{" "}
+                <span className="text-muted">It runs AI agents behind one API, so a brief becomes a full week of drafts in minutes.</span>
+              </p>
+              <ol className="mt-10 grid gap-3 md:grid-cols-3">
+                {ENGINE.map(([title, line], i) => (
+                  <li key={title} className="panel p-5">
+                    <span className="font-mono text-xs text-accent">0{i + 1}</span>
+                    <span className="mt-4 block font-medium">{title}</span>
+                    <span className="mt-1 block text-sm leading-relaxed text-muted">{line}</span>
+                  </li>
+                ))}
+              </ol>
+              <a href="https://harnessrouter.ai" className="link mt-6 inline-flex min-h-10 items-center text-sm font-medium">
+                harnessrouter.ai ↗
+              </a>
+            </div>
+          </div>
+        </section>
+
         {/* Work */}
         <section id="work" className="scroll-mt-20 border-b border-line">
           <div className="mx-auto max-w-6xl px-4 py-16 md:px-8 md:py-24">
             <div className="grid gap-8 lg:grid-cols-[16rem_minmax(0,1fr)]">
-              <SectionHead index="03" title="Work" />
+              <SectionHead index="04" title="Launch week" />
               <div>
                 <p className="display max-w-2xl text-3xl md:text-4xl">
-                  HarnessRouter Labs. Four days of social heading into demo day.{" "}
-                  <span className="text-muted">Up to $10,000 in prizes.</span>
+                  Four days of social heading into a launch.{" "}
+                  <span className="text-muted">A sample week, with example posts.</span>
                 </p>
                 <ol className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   {DAYS.map(([day, title, line], i) => (
@@ -233,7 +266,7 @@ export default function HomePage() {
         <section className="border-b border-line">
           <div className="mx-auto grid max-w-6xl gap-14 px-4 py-16 md:px-8 md:py-24 lg:grid-cols-2">
             <div>
-              <SectionHead index="04" title="Who it's for" />
+              <SectionHead index="05" title="Who it's for" />
               <ul className="mt-6">
                 {CLIENTS.map((line) => (
                   <li key={line} className="flex items-baseline gap-3 border-t border-line py-4 text-lg last:border-b">
@@ -246,7 +279,7 @@ export default function HomePage() {
               </ul>
             </div>
             <div>
-              <SectionHead index="05" title="How a month runs" />
+              <SectionHead index="06" title="How a month runs" />
               <ol className="mt-6 grid gap-3 sm:grid-cols-2">
                 {STEPS.map(([title, line], index) => (
                   <li key={title} className="panel p-5">
@@ -264,9 +297,9 @@ export default function HomePage() {
         <section id="rates" className="scroll-mt-20 border-b border-line bg-card">
           <div className="mx-auto max-w-6xl px-4 py-16 md:px-8 md:py-24">
             <div className="grid gap-8 lg:grid-cols-[16rem_minmax(0,1fr)]">
-              <SectionHead index="06" title="Pricing" />
+              <SectionHead index="07" title="Pricing" />
               <p className="max-w-xl text-lg leading-relaxed text-muted">
-                Monthly retainers, plus a campaign price for a launch or a hackathon. Ad spend, travel, and a full shoot day are separate.
+                Monthly retainers, plus a campaign price for a launch or an event. Ad spend, travel, and a full shoot day are separate.
               </p>
             </div>
             <ul className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -299,7 +332,7 @@ export default function HomePage() {
         <section id="start" className="scroll-mt-20">
           <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 md:px-8 md:py-24 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)]">
             <div>
-              <p className="eyebrow text-accent">07 — Get started</p>
+              <p className="eyebrow text-accent">08 — Get started</p>
               <h2 className="display mt-4 text-5xl md:text-6xl">
                 Start a <em>campaign.</em>
               </h2>

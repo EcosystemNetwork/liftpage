@@ -166,7 +166,7 @@ export default async function AdminPage() {
         <h2 id="requests" className="mb-1 display text-3xl">
           Requests
         </h2>
-        <p className="mb-4 text-sm text-muted">From the pilot form on the home page. Nothing is charged.</p>
+        <p className="mb-4 text-sm text-muted">From the request form on the home page. Nothing is charged.</p>
         {desk.holds.length ? <HoldList holds={desk.holds} admin /> : <p className="text-muted">No requests yet.</p>}
       </section>
     </>

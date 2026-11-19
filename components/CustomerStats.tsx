@@ -12,10 +12,10 @@ import { WeeklyBars } from "./WeeklyBars";
 
 export function Tile({ label, value, delta, note }: { label: string; value: string; delta?: number | null; note?: string }) {
   return (
-    <div className="border border-line p-4">
+    <div className="panel p-4">
       <p className={`${KICKER} text-muted`}>{label}</p>
-      <p className="mt-2 font-mono text-3xl text-ink">{value}</p>
-      <p className="mt-1 font-mono text-xs text-muted">
+      <p className="display mt-2 text-4xl text-ink">{value}</p>
+      <p className="mt-1 text-xs text-muted">
         {delta === undefined ? note ?? " " : delta === null ? "no prior week" : `${fmt.delta(delta)} vs prior week`}
       </p>
     </div>
@@ -33,7 +33,7 @@ export function CustomerStats({ metrics: all, canDelete, userId }: { metrics: Me
   const exportHref = `/export/metrics?range=${range}${owner ? `&user=${encodeURIComponent(owner)}` : ""}`;
   const bar = <RangeBar path={path} range={range} exportHref={exportHref} />;
   const importer = (
-    <details className="border border-line p-4">
+    <details className="panel p-4">
       <summary className="cursor-pointer eyebrow text-ink">Import weeks from a CSV</summary>
       <div className="mt-4 max-w-2xl">
         <ImportForm userId={userId} />
@@ -81,7 +81,7 @@ export function CustomerStats({ metrics: all, canDelete, userId }: { metrics: Me
       ) : null}
 
       {s.platforms.length > 1 ? (
-        <div className="border border-line p-4">
+        <div className="panel p-4">
           <p className={`${KICKER} text-muted`}>Impressions by platform, {fmt.week(latest.week)}</p>
           <ul className="mt-3 grid gap-2">
             {s.platforms.map((row) => (

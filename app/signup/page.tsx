@@ -17,16 +17,21 @@ export default async function SignupPage() {
       <main id="main" className="px-4 py-10 md:px-8">
         <div className="mx-auto max-w-md">
           <p className={`${KICKER} text-accent`}>Client account</p>
-          <h1 className="mt-3 display text-5xl md:text-6xl">Track the lift.</h1>
+          <h1 className="mt-3 display text-5xl md:text-6xl">Create your account.</h1>
           {signupOpen() ? (
             <>
-              <p className="mt-3 text-muted">Your requests and your weekly numbers, in one place.</p>
+              <p className="mt-3 text-muted">See your posts, messages, and how things are going, all in one place.</p>
               <div className="mt-8">
                 <SignupForm />
               </div>
             </>
           ) : (
-            <p className="mt-6 text-muted">Sign-up is closed. LiftPage sets up accounts for clients.</p>
+            <p className="mt-6 text-lg text-muted">
+              We set up your account for you. Tell us about your business and we&rsquo;ll email you a link to get in.{" "}
+              <Link href="/#start" className="link">
+                Start here
+              </Link>
+            </p>
           )}
           <p className="mt-8 text-sm text-muted">
             Have one?{" "}

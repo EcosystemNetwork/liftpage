@@ -2,16 +2,17 @@ import { dayKey, formatDay, formatSlot } from "@/lib/time";
 import { PLATFORM_NAME, type Brand, type Post } from "@/lib/types";
 import { KICKER } from "@/lib/ui";
 import { ReviewPost } from "./BoardForms";
+import { RedraftPost } from "./ClientAi";
 
-const STATUS = { draft: "Draft", approved: "Approved", cued: "Scheduled" } as const;
+const STATUS = { draft: "Waiting for you", approved: "Approved", cued: "Scheduled" } as const;
 const NOTE = { approved: "approved", changes: "asked for changes", comment: "commented" } as const;
 
 /**
  * The client's own board, read-only, by day. They approve, send back, or comment.
  * `preview` is the admin's view-as-client: same board, no review buttons.
  */
-export function ClientBoard({ brand, posts, preview = false }: { brand: Brand; posts: Post[]; preview?: boolean }) {
-  if (!posts.length) return <p className="panel px-5 py-6 text-muted">Nothing on {brand.name}&rsquo;s board yet. LiftPage will post the first lines here.</p>;
+export function ClientBoard({ brand, posts, preview = false, canRedraft = false }: { brand: Brand; posts: Post[]; preview?: boolean; canRedraft?: boolean }) {
+  if (!posts.length) return <p className="panel px-5 py-6 text-muted">No posts for {brand.name} yet. We&rsquo;ll put the first ones here for you to look over.</p>;
   const days = new Map<string, Post[]>();
   for (const post of [...posts].sort((a, b) => a.slot.localeCompare(b.slot))) {
     const key = dayKey(post.slot);
@@ -26,7 +27,7 @@ export function ClientBoard({ brand, posts, preview = false }: { brand: Brand; p
             {list.map((post) => {
               const out = post.publishState === "published" || post.publishState === "publishing";
               return (
-                <li key={post.id} className="grid gap-3 border border-line p-4 md:grid-cols-[minmax(0,1fr)_16rem]">
+                <li key={post.id} className="grid gap-3 panel p-5 md:grid-cols-[minmax(0,1fr)_16rem]">
                   <div className="min-w-0">
                     <p className={`${KICKER} text-muted`}>
                       {PLATFORM_NAME[post.platform]} · {formatSlot(post.slot)} ·{" "}
@@ -34,7 +35,7 @@ export function ClientBoard({ brand, posts, preview = false }: { brand: Brand; p
                     </p>
                     <p className="mt-2 font-semibold">{post.hook}</p>
                     <p className="mt-2 whitespace-pre-wrap text-sm">{post.caption}</p>
-                    <p className="mt-2 text-sm text-muted">Visual: {post.visual}</p>
+                    <p className="mt-2 text-sm text-muted">Picture: {post.visual}</p>
                     {post.publishedUrl ? (
                       <a href={post.publishedUrl} target="_blank" rel="noreferrer" className="mt-2 inline-block text-sm link">
                         See it live
@@ -56,7 +57,10 @@ export function ClientBoard({ brand, posts, preview = false }: { brand: Brand; p
                   {preview ? (
                     <p className={`${KICKER} text-muted`}>Preview: the client approves, sends back, or comments here.</p>
                   ) : (
-                    <ReviewPost postId={post.id} status={post.status} locked={out} />
+                    <div className="grid content-start gap-3">
+                      <ReviewPost postId={post.id} status={post.status} locked={out} />
+                      {canRedraft && !out && post.status !== "cued" ? <RedraftPost postId={post.id} /> : null}
+                    </div>
                   )}
                 </li>
               );

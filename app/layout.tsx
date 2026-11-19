@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     template: "%s — LiftPage",
   },
   description:
-    "LiftPage is a digital media marketing agency for technology startups, founders, and hackathons. Instagram, TikTok, X, LinkedIn, and YouTube.",
+    "LiftPage is a digital media marketing agency for technology startups, founders, and the communities around them. Instagram, TikTok, X, LinkedIn, and YouTube.",
 };
 
 export const viewport: Viewport = {

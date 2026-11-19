@@ -56,7 +56,7 @@ export function MessageThread({
   return (
     <div className="grid gap-4">
       {messages.length ? (
-        <ol ref={list} aria-label="Messages" className="grid max-h-[28rem] gap-3 overflow-y-auto border border-line p-3">
+        <ol ref={list} aria-label="Messages" className="grid max-h-[28rem] gap-3 overflow-y-auto panel p-4">
           {messages.map((m) => {
             const mine = m.role === viewer;
             return (

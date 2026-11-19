@@ -27,6 +27,8 @@ export function Desk({ initial, flash }: { initial: DeskFile; flash?: Flash }) {
   const [publishing, setPublishing] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [reply, setReply] = useState("");
+  const [redrafting, setRedrafting] = useState(false);
+  const [instruction, setInstruction] = useState("");
   const [clock, setClock] = useState("");
   const [editingVoice, setEditingVoice] = useState(false);
   const [voice, setVoice] = useState(initial.brand.voice);
@@ -208,6 +210,24 @@ export function Desk({ initial, flash }: { initial: DeskFile; flash?: Flash }) {
     }
   }
 
+  /** Rewrites the open post against its review notes. Takes the new words into the editor. */
+  async function redraft() {
+    if (!draft) return;
+    setRedrafting(true);
+    setError("");
+    try {
+      const { desk: next, notice } = await send("/api/revise", { postId: draft.id, instruction }, "POST");
+      const fresh = next.posts.find((item) => item.id === draft.id);
+      if (fresh) setDraft(fresh);
+      setInstruction("");
+      setNotice(notice ?? "Redrafted.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "The redraft failed.");
+    } finally {
+      setRedrafting(false);
+    }
+  }
+
   async function askReview() {
     setError("");
     try {
@@ -270,7 +290,7 @@ export function Desk({ initial, flash }: { initial: DeskFile; flash?: Flash }) {
               value={brief}
               onChange={(event) => setBrief(event.target.value)}
               rows={4}
-              placeholder="A judge to name, a team to show, a prize line, a livestream link."
+              placeholder="A customer to name, a feature to show, an offer line, a livestream link."
               className="field py-3"
             />
           </label>
@@ -470,10 +490,33 @@ export function Desk({ initial, flash }: { initial: DeskFile; flash?: Flash }) {
                   Note to the client
                   <textarea id="reply-note" value={reply} onChange={(event) => setReply(event.target.value)} rows={2} className="field py-2.5" />
                 </label>
-                <button type="submit" disabled={!reply.trim()} className="min-h-9 justify-self-start border border-line px-3 eyebrow disabled:opacity-50">
+                <button type="submit" disabled={!reply.trim()} className="btn-ghost btn-sm justify-self-start">
                   Send note
                 </button>
               </form>
+              {live.status !== "cued" && live.publishState !== "published" ? (
+                <div className="mt-4 grid gap-2 border-t border-line pt-4">
+                  <label className="grid gap-2 text-sm" htmlFor="redraft-ask">
+                    Redraft with AI
+                    <input
+                      id="redraft-ask"
+                      value={instruction}
+                      onChange={(event) => setInstruction(event.target.value)}
+                      placeholder="Optional: what else to change"
+                      className="field"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={redraft}
+                    disabled={redrafting || (!instruction.trim() && !live.notes.some((note) => note.kind !== "approved" && note.text.trim()))}
+                    className="btn-ghost btn-sm justify-self-start"
+                  >
+                    {redrafting ? "Redrafting" : "Redraft from the notes"}
+                  </button>
+                  <p className="text-xs text-muted">Rewrites this post against the review above. It stays a draft until the client approves again.</p>
+                </div>
+              ) : null}
             </section>
           ) : null}
         </aside>
@@ -512,7 +555,7 @@ export function Desk({ initial, flash }: { initial: DeskFile; flash?: Flash }) {
                 const link = desk.connections.find((c) => c.platform === platform);
                 const can = desk.connectable.includes(platform);
                 return (
-                  <li key={platform} className="flex flex-wrap items-center justify-between gap-2 border border-line px-2 py-2 text-sm">
+                  <li key={platform} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-card px-3 py-2.5 text-sm">
                     <span>
                       <span className="eyebrow text-muted">{MARK[platform]} </span>
                       {link ? link.accountName : <span className="text-muted">{PLATFORM_NAME[platform]} · not connected</span>}
@@ -604,8 +647,8 @@ function StatusMark({ status, publish, notes, sentBack }: { status: Status; publ
   const strong = status === "cued" || publish === "published";
   return (
     <span
-      className={`inline-flex min-h-10 items-center gap-1 px-2 eyebrow ${
-        publish === "failed" || sentBack ? "text-danger" : strong ? "bg-ink text-canvas" : "text-muted"
+      className={`inline-flex min-h-7 items-center gap-1 rounded-full px-2.5 eyebrow text-[10px] ${
+        publish === "failed" || sentBack ? "bg-danger-soft text-danger" : strong ? "bg-ink text-canvas" : "text-muted"
       }`}
     >
       {label}

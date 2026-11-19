@@ -34,6 +34,7 @@ const user = (patch: Partial<User> = {}): User => ({
   lastLoginAt: iso(-1),
   disabled: false,
   stage: "active",
+  tools: [],
   ...patch,
 });
 

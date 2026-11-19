@@ -4,7 +4,7 @@ Status: live
 
 Tagline: Attention into traction.
 
-LiftPage is an AI-first social desk for technology startups, founders, hackathons, and innovation communities.
+LiftPage is an AI-first social desk for technology startups, founders, funds, and the communities around them.
 
 ## Direction
 

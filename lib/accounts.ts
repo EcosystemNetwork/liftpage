@@ -1,5 +1,6 @@
 import "server-only";
 import { db, must, supabaseReady } from "./supabase/server";
+import { cleanTools } from "./tools";
 import { effectiveRole, isOwnerEmail, OWNER_EMAILS } from "./owner";
 import { CLIENT_STAGES, type AccountsFile, type ClientStage, type Metric, type User } from "./types";
 
@@ -20,6 +21,8 @@ export function toUser(row: Row): User {
     disabled: Boolean(row.disabled),
     // Before the admin-tools migration there is no stage column.
     stage: CLIENT_STAGES.includes(row.stage as ClientStage) ? (row.stage as ClientStage) : "onboarding",
+    // Before the client-tools migration there is no tools column: nothing switched on.
+    tools: cleanTools(row.tools),
   };
 }
 
@@ -118,7 +121,23 @@ export async function loadAccounts(): Promise<AccountsFile> {
 
 export async function findUser(id: string): Promise<User | undefined> {
   const row = must(await db().from("profiles").select("*").eq("id", id).maybeSingle(), "find user");
-  return row ? toUser(row) : undefined;
+  if (!row) return undefined;
+  const user = toUser(row);
+  // Until the client-tools migration adds profiles.tools, a client's tools live in their
+  // Supabase Auth app_metadata, which only the server's secret key can write.
+  if (!("tools" in row) && user.role === "client") user.tools = await metadataTools(id);
+  return user;
+}
+
+/** A client's tools from Auth app_metadata. Never throws: a failure means no tools. */
+export async function metadataTools(id: string): Promise<User["tools"]> {
+  try {
+    const { data, error } = await db().auth.admin.getUserById(id);
+    if (error) return [];
+    return cleanTools((data.user?.app_metadata as { tools?: unknown } | undefined)?.tools);
+  } catch {
+    return [];
+  }
 }
 
 export async function findUserByEmail(email: string): Promise<User | undefined> {
@@ -153,7 +172,7 @@ export function signupOpen(): boolean {
 }
 
 export function passwordProblem(password: string): string | null {
-  if (password.length < 10) return "Use at least 10 characters.";
+  if (password.length < 8) return "Use at least 8 characters.";
   if (password.length > 72) return "Keep it under 72 characters.";
   return null;
 }

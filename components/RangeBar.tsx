@@ -22,7 +22,7 @@ export function RangeBar({ path, range, exportHref }: { path: string; range: Ran
           );
         })}
       </nav>
-      <a href={exportHref} className="inline-flex min-h-9 items-center border border-line px-2 text-ink" download>
+      <a href={exportHref} className="btn-ghost btn-sm" download>
         Export CSV
       </a>
     </div>

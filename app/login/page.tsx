@@ -22,8 +22,8 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
       <main id="main" className="px-4 py-10 md:px-8">
         <div className="mx-auto max-w-md">
           <p className={`${KICKER} text-accent`}>Sign in</p>
-          <h1 className="mt-3 display text-5xl md:text-6xl">Your desk.</h1>
-          <p className="mt-3 text-muted">Clients see their requests and their numbers. LiftPage runs the board.</p>
+          <h1 className="mt-3 display text-5xl md:text-6xl">Sign in.</h1>
+          <p className="mt-3 text-muted">See your posts, messages, and how things are going.</p>
           {offline ? (
             <p className="mt-6 rounded-xl border border-danger/30 bg-danger-soft px-4 py-3 text-sm">
               Accounts aren&rsquo;t connected. Set the Supabase keys in <code className="font-mono">.env.local</code> and restart.
@@ -31,7 +31,10 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           ) : null}
           {error === "link" ? (
             <p role="alert" className="mt-6 rounded-xl border border-danger/30 bg-danger-soft px-4 py-3 text-sm">
-              That link has expired or was already used. Ask for a new one.
+              That link has expired or was already used. No problem, we can send a fresh one.{" "}
+              <Link href="/forgot" className="link font-medium">
+                Send me a new link
+              </Link>
             </p>
           ) : null}
           {noOwner ? (

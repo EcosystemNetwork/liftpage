@@ -1,3 +1,4 @@
+import { askHarnessRouter, askTokenRouter, complete, harnessName, harnessReady, safeErr, tokenReady, type AiVia } from "./ai";
 import { nid } from "./id";
 import { futureSlots } from "./time";
 import type { Brand, CutVia, Platform, Post } from "./types";
@@ -6,6 +7,20 @@ import { PLATFORMS } from "./types";
 export type DraftPost = Pick<Post, "platform" | "slot" | "hook" | "caption" | "visual" | "reply">;
 
 const PLATFORM_SET = new Set<string>(PLATFORMS);
+
+export { safeErr, textFromUnknown } from "./ai";
+
+/** The most a caption can be and still publish. X is the hard one: 280, counted by code point. */
+export const CAPTION_LIMIT: Record<Platform, number> = { x: 280, instagram: 2200, tiktok: 2200, linkedin: 3000, youtube: 5000 };
+
+
+/** Clips to the network's limit, counting the way X does (code points), leaving room for the ellipsis. */
+export function fitCaption(platform: Platform, caption: string): string {
+  const limit = Math.min(CAPTION_LIMIT[platform], 1200);
+  const chars = [...caption.trim()];
+  if (chars.length <= limit) return caption.trim();
+  return `${chars.slice(0, limit - 1).join("").trimEnd()}…`;
+}
 
 function clip(value: string, max: number): string {
   const text = value.replace(/\s+/g, " ").trim();
@@ -103,33 +118,6 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value as Record<string, unknown>;
 }
 
-export function textFromUnknown(data: unknown): string {
-  if (typeof data === "string") return data;
-  const record = asRecord(data);
-  if (!record) return "";
-  if (typeof record.output_text === "string") return record.output_text;
-  const chunks: string[] = [];
-  if (Array.isArray(record.output)) {
-    for (const item of record.output) {
-      const row = asRecord(item);
-      if (!row) continue;
-      if (typeof row.text === "string") chunks.push(row.text);
-      if (!Array.isArray(row.content)) continue;
-      for (const part of row.content) {
-        const block = asRecord(part);
-        if (block && typeof block.text === "string") chunks.push(block.text);
-      }
-    }
-  }
-  if (chunks.length) return chunks.join("\n");
-  if (Array.isArray(record.choices)) {
-    const choice = asRecord(record.choices[0]);
-    const message = choice ? asRecord(choice.message) : null;
-    if (message && typeof message.content === "string") return message.content;
-  }
-  return "";
-}
-
 function platformOf(value: unknown): Platform | null {
   if (typeof value !== "string") return null;
   const name = value.toLowerCase().replace(/\s+/g, "");
@@ -171,112 +159,55 @@ export function parsePosts(text: string, slots: string[]): DraftPost[] | null {
       platform,
       slot,
       hook: clip(hook || caption, 120),
-      caption: clip(caption || hook, 1200),
-      visual: clip(typeof item.visual === "string" ? item.visual : "The work, full frame.", 240),
-      reply: clip(typeof item.reply === "string" ? item.reply : "What did we leave out?", 240),
+      caption: fitCaption(platform, caption || hook),
+      visual: clip(typeof item.visual === "string" && item.visual.trim() ? item.visual : "The work, full frame.", 400),
+      reply: clip(typeof item.reply === "string" && item.reply.trim() ? item.reply : "What did we leave out?", 240),
     });
   });
   if (posts.length < 3) return null;
   return posts.slice(0, 8);
 }
 
-function prompt(brand: Brand, brief: string): string {
+function platformRules(platforms: Platform[]): string[] {
+  const rules = [
+    "X: the caption is at most 270 characters, one idea, no thread numbering.",
+    "LinkedIn: short paragraphs, the first line earns the click, end on a question or a plain ask.",
+    "Instagram: the hook is the first line of the caption; for a Reel the visual is a shot list.",
+    "TikTok and YouTube Shorts: the visual is a timed shot list for a 20–40 second video, e.g. \"0–3s: … / 3–10s: … / 10–25s: … / end card: …\", under 400 characters.",
+    "reply is the first comment or reply the brand posts under its own post.",
+  ];
+  const keep = new Set(platforms);
+  return rules.filter((rule) =>
+    rule.startsWith("reply") ||
+    (rule.startsWith("X") && keep.has("x")) ||
+    (rule.startsWith("LinkedIn") && keep.has("linkedin")) ||
+    (rule.startsWith("Instagram") && keep.has("instagram")) ||
+    (rule.startsWith("TikTok") && (keep.has("tiktok") || keep.has("youtube"))),
+  );
+}
+
+function brandLines(brand: Brand): string[] {
   return [
     `You are the LiftPage operator for ${brand.name} (${brand.handle}).`,
     `Voice: ${brand.voice}`,
     `Offer: ${brand.offers}`,
     `Platforms: ${brand.platforms.join(", ")}.`,
+  ];
+}
+
+const HOUSE_RULES = "No hashtag walls. No “excited to announce”. No emoji. Keep the facts in the brief. Do not invent metrics, customers, quotes, or dates.";
+
+function prompt(brand: Brand, brief: string): string {
+  return [
+    ...brandLines(brand),
     "Cut a week of posts from the brief. Each post is native to its platform. Do not resize one caption.",
-    "No hashtag walls. No “excited to announce”. No emoji. Keep the facts in the brief. Do not invent metrics.",
+    HOUSE_RULES,
+    ...platformRules(brand.platforms),
     'Return JSON only: {"posts":[{"platform":"x|instagram|tiktok|linkedin|youtube","hook":"","caption":"","visual":"","reply":""}]}',
     "Write 6 posts.",
     "",
     `Brief: ${brief}`,
   ].join("\n");
-}
-
-export function safeErr(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error);
-  return message
-    .replace(/(Bearer\s+)[A-Za-z0-9._\-]+/gi, "$1[key]")
-    .replace(/\b(?:sk|tr|hr)_[A-Za-z0-9_\-]+/g, "[key]")
-    .slice(0, 280);
-}
-
-function joinUrl(base: string, path: string): string {
-  return `${base.replace(/\/$/, "")}${path.startsWith("/") ? path : `/${path}`}`;
-}
-
-async function postJson(url: string, key: string, body: unknown, label: string): Promise<string> {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(100_000),
-  });
-  const raw = await response.text();
-  if (!response.ok) {
-    let detail = raw.slice(0, 240);
-    try {
-      const parsed = JSON.parse(raw) as { error?: { message?: string }; detail?: string };
-      if (parsed.error?.message) detail = parsed.error.message;
-      else if (parsed.detail) detail = parsed.detail;
-    } catch {
-      detail = raw.slice(0, 240);
-    }
-    throw new Error(`${label} ${response.status}: ${detail}`);
-  }
-  try {
-    return textFromUnknown(JSON.parse(raw)) || raw;
-  } catch {
-    return raw;
-  }
-}
-
-async function tokenCut(brand: Brand, brief: string): Promise<string> {
-  const base = process.env.TOKENROUTER_BASE_URL;
-  const key = process.env.TOKENROUTER_API_KEY;
-  if (!base || !key) throw new Error("TokenRouter is not configured");
-  const model = process.env.TOKENROUTER_MODEL || "openai/gpt-5-mini";
-  return postJson(
-    joinUrl(base, "/chat/completions"),
-    key,
-    {
-      model,
-      temperature: 0.4,
-      messages: [
-        { role: "system", content: "You return JSON only." },
-        { role: "user", content: prompt(brand, brief) },
-      ],
-    },
-    "TokenRouter",
-  );
-}
-
-async function harnessCut(input: string): Promise<string> {
-  const base = process.env.HARNESSROUTER_BASE_URL;
-  const key = process.env.HARNESSROUTER_API_KEY;
-  if (!base || !key) throw new Error("HarnessRouter is not configured");
-  const harness = process.env.HARNESSROUTER_HARNESS_ID || "codex";
-  const model = process.env.HARNESSROUTER_MODEL || "gpt-5.4-mini";
-  return postJson(
-    joinUrl(base, "/v1/responses"),
-    key,
-    {
-      input,
-      model,
-      stream: false,
-      backend: harness,
-      metadata: { harness_id: harness },
-      max_output_tokens: 2500,
-      max_step: 6,
-      timeout_seconds: 90,
-    },
-    "HarnessRouter",
-  );
 }
 
 export async function cutWeek(
@@ -288,12 +219,21 @@ export async function cutWeek(
   let drafts: DraftPost[] | null = null;
   let via: CutVia = "local";
 
-  const tokenReady = Boolean(process.env.TOKENROUTER_BASE_URL && process.env.TOKENROUTER_API_KEY);
-  const harnessReady = Boolean(process.env.HARNESSROUTER_BASE_URL && process.env.HARNESSROUTER_API_KEY);
-
-  if (tokenReady) {
+  if (harnessReady()) {
     try {
-      drafts = parsePosts(await tokenCut(brand, brief), slots);
+      drafts = parsePosts(await askHarnessRouter(prompt(brand, brief)), slots);
+      if (drafts) {
+        via = "harnessrouter";
+        notes.push(`HarnessRouter (${harnessName()}) cut the week.`);
+      } else notes.push("HarnessRouter answered, but the JSON was unusable.");
+    } catch (error) {
+      notes.push(`HarnessRouter skipped: ${safeErr(error)}`);
+    }
+  }
+
+  if (!drafts && tokenReady()) {
+    try {
+      drafts = parsePosts(await askTokenRouter(prompt(brand, brief)), slots);
       if (drafts) {
         via = "tokenrouter";
         notes.push("TokenRouter cut the week.");
@@ -303,31 +243,19 @@ export async function cutWeek(
     }
   }
 
-  if (!drafts && harnessReady) {
-    try {
-      drafts = parsePosts(await harnessCut(prompt(brand, brief)), slots);
-      if (drafts) {
-        via = "harnessrouter";
-        notes.push(`HarnessRouter (${process.env.HARNESSROUTER_HARNESS_ID || "codex"}) cut the week.`);
-      } else notes.push("HarnessRouter answered, but the JSON was unusable.");
-    } catch (error) {
-      notes.push(`HarnessRouter skipped: ${safeErr(error)}`);
-    }
-  }
-
-  if (drafts && harnessReady && via === "tokenrouter") {
+  if (drafts && harnessReady() && via !== "local") {
     try {
       const reviewed = parsePosts(
-        await harnessCut(
+        await askHarnessRouter(
           `${prompt(brand, brief)}\n\nTighten this JSON. Keep the facts. Return the same shape.\n${JSON.stringify({ posts: drafts })}`,
         ),
         slots,
       );
       if (reviewed) {
         drafts = reviewed;
-        via = "both";
-        notes.push(`HarnessRouter (${process.env.HARNESSROUTER_HARNESS_ID || "codex"}) passed the cut.`);
-      } else notes.push("HarnessRouter pass returned unusable JSON. Kept the TokenRouter cut.");
+        if (via === "tokenrouter") via = "both";
+        notes.push(`HarnessRouter (${harnessName()}) passed the cut.`);
+      } else notes.push("HarnessRouter pass returned unusable JSON. Kept the first cut.");
     } catch (error) {
       notes.push(`HarnessRouter pass skipped: ${safeErr(error)}`);
     }
@@ -344,4 +272,64 @@ export async function cutWeek(
     note: notes.join(" "),
     posts: drafts.map((draft) => ({ ...draft, id: nid("p"), status: "draft" as const, publishState: "idle" as const, notes: [] })),
   };
+}
+
+export type Revision = Pick<Post, "hook" | "caption" | "visual" | "reply">;
+
+/** Reads one rewritten post out of a model answer, held to the network's limits. */
+export function parseRevision(text: string, platform: Platform): Revision | null {
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start < 0 || end <= start) return null;
+  let parsed: Record<string, unknown>;
+  try {
+    const value = JSON.parse(text.slice(start, end + 1)) as unknown;
+    if (!value || typeof value !== "object") return null;
+    parsed = value as Record<string, unknown>;
+    if (parsed.post && typeof parsed.post === "object") parsed = parsed.post as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+  const str = (key: string) => (typeof parsed[key] === "string" ? (parsed[key] as string).trim() : "");
+  const caption = str("caption");
+  if (!caption) return null;
+  return {
+    hook: clip(str("hook") || caption, 120),
+    caption: fitCaption(platform, caption),
+    visual: clip(str("visual") || "The work, full frame.", 400),
+    reply: clip(str("reply") || "What did we leave out?", 240),
+  };
+}
+
+/**
+ * Rewrites one post against its review notes: the client's change requests first, then any
+ * comments. Returns the new lines, or an error that says which backend failed.
+ */
+export async function revisePost(
+  post: Post,
+  brand: Brand,
+  extra = "",
+): Promise<{ revision: Revision; via: AiVia; note: string } | { error: string }> {
+  const asks = post.notes
+    .filter((note) => note.kind !== "approved" && note.text.trim())
+    .map((note) => `- ${note.role === "client" ? "Client" : "LiftPage"} (${note.kind === "changes" ? "asked for changes" : "comment"}): ${note.text.trim()}`);
+  if (!asks.length && !extra.trim()) return { error: "There is nothing to revise against. Add a note first." };
+  const ask = [
+    ...brandLines(brand),
+    `Rewrite this ${post.platform} post so it answers the review notes. Keep what nobody asked to change.`,
+    HOUSE_RULES,
+    ...platformRules([post.platform]),
+    'Return JSON only: {"hook":"","caption":"","visual":"","reply":""}',
+    "",
+    `Post: ${JSON.stringify({ hook: post.hook, caption: post.caption, visual: post.visual, reply: post.reply })}`,
+    "",
+    "Review notes, oldest first:",
+    ...asks,
+    extra.trim() ? `- LiftPage (instruction): ${extra.trim()}` : "",
+  ].join("\n");
+  const answer = await complete(ask, { accept: (text) => parseRevision(text, post.platform) !== null });
+  if ("error" in answer) return { error: answer.error };
+  const revision = parseRevision(answer.text, post.platform)!;
+  const name = answer.via === "tokenrouter" ? "TokenRouter" : `HarnessRouter (${harnessName()})`;
+  return { revision, via: answer.via, note: [...answer.notes, `${name} redrafted the post.`].join(" ") };
 }

@@ -9,7 +9,7 @@
   --card: #ffffff;
   --sunken: #ede8df;
   --ink: #17150f;
-  --muted: #655f55;
+  --muted: #4f4a42;
   --line: #ded7cb;
   --line-strong: #17150f;
   --accent: #c2410c;
@@ -26,7 +26,7 @@
     --card: #1c1a16;
     --sunken: #0e0d0b;
     --ink: #f3efe7;
-    --muted: #a8a194;
+    --muted: #c2bbae;
     --line: #302c26;
     --line-strong: #f3efe7;
     --accent: #ff7a4d;
@@ -43,7 +43,7 @@
   --card: #1c1a16;
   --sunken: #0e0d0b;
   --ink: #f3efe7;
-  --muted: #a8a194;
+  --muted: #c2bbae;
   --line: #302c26;
   --line-strong: #f3efe7;
   --accent: #ff7a4d;
@@ -73,6 +73,8 @@
 
 html {
   background: var(--canvas);
+  /* 17px base: every rem size (text-sm, buttons, fields) grows with it. */
+  font-size: 106.25%;
 }
 
 body {
@@ -105,7 +107,7 @@ body {
 
   .eyebrow {
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 0.8125rem;
     text-transform: uppercase;
     letter-spacing: 0.14em;
   }
@@ -115,14 +117,14 @@ body {
   .btn-ghost,
   .btn-danger {
     display: inline-flex;
-    min-height: 2.5rem;
+    min-height: 2.75rem;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
     border-radius: 999px;
     border: 1px solid transparent;
-    padding-inline: 1.125rem;
-    font-size: 0.875rem;
+    padding-inline: 1.25rem;
+    font-size: 0.9375rem;
     font-weight: 500;
     line-height: 1;
     white-space: nowrap;
@@ -163,14 +165,15 @@ body {
     transform: none;
   }
   .btn-sm {
-    min-height: 2.125rem;
-    padding-inline: 0.875rem;
-    font-size: 0.8125rem;
+    min-height: 2.5rem;
+    padding-inline: 1rem;
+    font-size: 0.875rem;
   }
 
   .field {
-    min-height: 2.75rem;
+    min-height: 3rem;
     width: 100%;
+    font-size: 1rem;
     border-radius: 0.625rem;
     border: 1px solid var(--line);
     background: var(--card);

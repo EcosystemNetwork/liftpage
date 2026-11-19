@@ -71,7 +71,7 @@ async function tryCreate(data: FormData): Promise<FormState> {
   return { ok: `Made ${email}. ${await deliver("invite", email, link.url, name)}` };
 }
 
-/** Turns a pilot request into a client account and links every request from that email. */
+/** Turns a campaign request into a client account and links every request from that email. */
 export async function accountFromHold(_: FormState, data: FormData): Promise<FormState> {
   const me = await requireAdmin();
   const hold = await loadHold(text(data, "holdId", 40));

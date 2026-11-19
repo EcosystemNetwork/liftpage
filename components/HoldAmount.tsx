@@ -16,7 +16,7 @@ export function HoldAmount({ holdId, amount, company }: { holdId: string; amount
           inputMode="numeric"
           defaultValue={amount}
           aria-label={`Price for ${company}, whole dollars`}
-          className="min-h-9 w-24 border border-line bg-card px-2 text-right font-mono text-xs"
+          className="field min-h-9 w-24 px-2 text-right font-mono text-xs"
         />
         <RowButton>Price</RowButton>
       </span>

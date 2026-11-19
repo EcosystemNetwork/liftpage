@@ -2,7 +2,7 @@
 
 Attention into traction.
 
-LiftPage is a digital media marketing site for technology companies. The public pages sell the work: platforms, services, a campaign, and pricing. The production desk at `/desk` holds the HarnessRouter Labs pilot for The Big Hack Game (Nov 17–20, 2026). That campaign is an offer, not a signed partnership.
+LiftPage is a digital media marketing agency for technology companies. The public pages sell the work: platforms, services, a sample launch week, and pricing. The production desk at `/desk` is where campaigns are planned, drafted, approved, and published.
 
 ## Run
 
@@ -57,5 +57,5 @@ Identity is Supabase Auth. Role and the switched-off flag live in `profiles` and
 1. Open the home page. The rate card and the four days are the company.
 2. Open the desk. Approve a draft. Cue it: with Inngest and a connected network it posts at its slot.
 3. Paste a brief and cut the day.
-4. Request a pilot from the home page. A confirmation email goes out and it shows up under Requests; pay the deposit and it turns Won.
+4. Request a campaign from the home page. A confirmation email goes out and it shows up under Requests; pay the deposit and it turns Won.
 5. Make an account from the request, open a board for that client, and review it as the client from `/account`.

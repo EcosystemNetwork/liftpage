@@ -114,6 +114,8 @@ export type User = {
   disabled: boolean;
   /** Where a client is in the relationship. Admin-only; clients never see it. */
   stage: ClientStage;
+  /** AI tools an admin switched on for this client. See lib/tools.ts. */
+  tools: string[];
 };
 
 /** Passwords live in Supabase Auth, so a profile row is safe to hand to a page. */
@@ -189,7 +191,7 @@ export const PACKAGES: Record<PackageId, { name: string; price: string; amount: 
   starter: { name: "Starter", price: "$750", amount: 750, deliver: "12 posts, 2 platforms" },
   growth: { name: "Growth", price: "$1,500", amount: 1500, deliver: "20 posts, 3 platforms, 8 videos" },
   accelerator: { name: "Accelerator", price: "$3,000", amount: 3000, deliver: "30 posts, 5 platforms, 16 videos" },
-  event: { name: "Event Launch", price: "$1,500–$5,000", amount: 1500, deliver: "A campaign around one launch or hackathon" },
+  event: { name: "Event Launch", price: "$1,500–$5,000", amount: 1500, deliver: "A campaign around one launch or event" },
 };
 
 /** A private note on a client. Admins only. */

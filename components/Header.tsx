@@ -6,7 +6,8 @@ import { ThemeToggle } from "./ThemeToggle";
 const LINKS = [
   ["/#platforms", "Platforms"],
   ["/#services", "Services"],
-  ["/#work", "Work"],
+  ["/#engine", "HarnessRouter"],
+  ["/#work", "Launch week"],
   ["/#rates", "Pricing"],
 ];
 

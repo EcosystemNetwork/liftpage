@@ -20,7 +20,7 @@ export function WeeklyBars({ weeks, field, title }: { weeks: WeekTotals[]; field
   const step = rows.length <= 7 ? 1 : Math.ceil(rows.length / 7);
 
   return (
-    <figure className="border border-line p-3">
+    <figure className="panel p-3">
       <figcaption className="mb-2 eyebrow text-muted">{title} by week</figcaption>
       <svg viewBox={`0 0 ${W} ${H}`} className="block h-auto w-full" role="img" aria-label={`${title} by week`}>
         {ticks.map((tick) => {

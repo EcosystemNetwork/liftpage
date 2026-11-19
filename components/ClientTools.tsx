@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { addNoteAction, broadcast, draftWeek } from "@/app/actions/clients";
+import { addNoteAction, broadcast, draftWeek, setClientTools } from "@/app/actions/clients";
 import type { FormState } from "@/app/actions/auth";
 import { CLIENT_STAGES } from "@/lib/types";
 import { INPUT, LABEL } from "@/lib/ui";
@@ -33,7 +33,7 @@ export function ToolButton({
       onSubmit={(event) => {
         if (confirm && !window.confirm(confirm)) event.preventDefault();
       }}
-      className="grid content-start gap-2 border border-line p-3"
+      className="grid content-start gap-2 panel p-4"
     >
       {clientId ? <input type="hidden" name="clientId" value={clientId} /> : null}
       <div>
@@ -125,6 +125,33 @@ export function BroadcastForm({ counts }: { counts: Partial<Record<(typeof CLIEN
       <Message state={state} />
       <Submit busy="Sending" className="justify-self-start">
         Send to clients
+      </Submit>
+    </form>
+  );
+}
+
+/** Admin switches for the AI tools a client can run on their own board. */
+export function ClientToolsForm({ clientId, tools, on, ready }: { clientId: string; tools: { id: string; label: string; hint: string }[]; on: string[]; ready: boolean }) {
+  const [state, run] = useActionState(setClientTools, undefined);
+  return (
+    <form action={run} className="grid gap-4">
+      <input type="hidden" name="clientId" value={clientId} />
+      <fieldset className="grid gap-2 sm:grid-cols-2">
+        <legend className="sr-only">Tools the client can use</legend>
+        {tools.map((tool) => (
+          <label key={tool.id} className="flex items-start gap-3 rounded-lg border border-line p-3 text-sm">
+            <input type="checkbox" name="tool" value={tool.id} defaultChecked={on.includes(tool.id)} className="mt-1" />
+            <span>
+              <span className="font-medium">{tool.label}</span>
+              <span className="mt-0.5 block text-xs text-muted">{tool.hint}</span>
+            </span>
+          </label>
+        ))}
+      </fieldset>
+      {!ready ? <p className="text-sm text-danger">No AI backend is set up, so switched-on tools won&rsquo;t answer yet.</p> : null}
+      <Message state={state} />
+      <Submit busy="Saving" className="justify-self-start">
+        Save tools
       </Submit>
     </form>
   );
