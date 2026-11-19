@@ -17,7 +17,6 @@ export function ptOffsetMinutes(date: Date): number {
 export function zonedISO(y: number, m: number, d: number, hh: number, mm: number): string {
   const asUtc = Date.UTC(y, m - 1, d, hh, mm);
   const offset = ptOffsetMinutes(new Date(asUtc));
-  const utcMs = asUtc - offset * 60_000;
   const sign = offset <= 0 ? "-" : "+";
   const abs = Math.abs(offset);
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -66,6 +65,17 @@ export function formatSlot(iso: string): string {
   return new Intl.DateTimeFormat("en-US", {
     timeZone: ZONE,
     weekday: "short",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(iso));
+}
+
+/** "Nov 18, 2:05 PM" in Pacific, for message stamps. */
+export function formatStamp(iso: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: ZONE,
+    month: "short",
+    day: "numeric",
     hour: "numeric",
     minute: "2-digit",
   }).format(new Date(iso));
