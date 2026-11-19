@@ -8,6 +8,7 @@ import { runAnalyst } from "./analyst";
 import { runCommunity } from "./community";
 import { runDistribution } from "./distribution";
 import type { Research, Strategy } from "./parse";
+import { addUsage, metered, usageOf, type Usage } from "../usage";
 import { runResearch } from "./research";
 import { runStrategy } from "./strategy";
 
@@ -34,8 +35,8 @@ async function load(id: string): Promise<Loaded | null> {
   return campaign && brand ? { campaign, brand } : null;
 }
 
-async function fail(id: string, agent: AgentId, error: unknown, memory: { research?: Research; strategy?: Strategy } = {}) {
-  await setStep(id, agent, { status: "failed", error: safeErr(error) });
+async function fail(id: string, agent: AgentId, error: unknown, memory: { research?: Research; strategy?: Strategy } = {}, spent?: Usage) {
+  await setStep(id, agent, { status: "failed", error: safeErr(error), usage: addUsage(spent, usageOf(error)) });
   for (const later of PIPELINE.slice(PIPELINE.indexOf(agent) + 1)) {
     await setStep(id, later, { status: "skipped", note: `Stopped: ${agent} failed.` });
   }
@@ -56,8 +57,8 @@ export async function researchStage(id: string): Promise<Research | null> {
   await setStep(id, "research", { status: "running" });
   try {
     const { campaign, brand } = loaded;
-    const result = await runResearch({ url: campaign.url, competitors: campaign.competitors, brand });
-    await setStep(id, "research", { status: "done", output: result.output, via: result.via, note: result.note });
+    const { value: result, usage } = await metered(() => runResearch({ url: campaign.url, competitors: campaign.competitors, brand }));
+    await setStep(id, "research", { status: "done", output: result.output, via: result.via, note: result.note, usage });
     return result.output;
   } catch (error) {
     await fail(id, "research", error);
@@ -70,8 +71,8 @@ export async function strategyStage(id: string, research: Research): Promise<Str
   if (!loaded) return null;
   await setStep(id, "strategy", { status: "running" });
   try {
-    const result = await runStrategy({ research, brand: loaded.brand, goal: loaded.campaign.goal });
-    await setStep(id, "strategy", { status: "done", output: result.output, via: result.via, note: result.note });
+    const { value: result, usage } = await metered(() => runStrategy({ research, brand: loaded.brand, goal: loaded.campaign.goal }));
+    await setStep(id, "strategy", { status: "done", output: result.output, via: result.via, note: result.note, usage });
     return result.output;
   } catch (error) {
     await fail(id, "strategy", error, { research });
@@ -90,40 +91,50 @@ export async function contentStart(id: string) {
   await setStep(id, "content", { status: "running", note: "Writing posts and a newsletter." });
 }
 
-export async function postsStage(id: string, research: Research, strategy: Strategy): Promise<Cut | null> {
+export async function postsStage(id: string, research: Research, strategy: Strategy): Promise<(Cut & { usage?: Usage }) | null> {
   const input = await contentInput(id, research, strategy);
   if (!input) return null;
   try {
-    return await writePosts(input);
+    const { value, usage } = await metered(() => writePosts(input));
+    return { ...value, usage };
   } catch (error) {
     await fail(id, "content", error, { research, strategy });
     return null;
   }
 }
 
-export async function newsletterStage(id: string, research: Research, strategy: Strategy): Promise<Letter> {
+export async function newsletterStage(id: string, research: Research, strategy: Strategy): Promise<Letter & { usage?: Usage }> {
   const input = await contentInput(id, research, strategy);
-  return input ? writeNewsletter(input) : { note: "" };
+  if (!input) return { note: "" };
+  const { value, usage } = await metered(() => writeNewsletter(input));
+  return { ...value, usage };
 }
 
 /** Saves the drafts and closes the Content step. The campaign stays running for the later agents. */
-export async function finishStage(id: string, research: Research, strategy: Strategy, cut: Cut, letter: Letter): Promise<string[] | null> {
+export async function finishStage(
+  id: string,
+  research: Research,
+  strategy: Strategy,
+  cut: Cut & { usage?: Usage },
+  letter: Letter & { usage?: Usage },
+): Promise<string[] | null> {
   const input = await contentInput(id, research, strategy);
   if (!input) return null;
+  const usage = addUsage(cut.usage, letter.usage);
   try {
     const result = await saveContent(input, cut, letter);
-    await setStep(id, "content", { status: "done", output: result.output, via: result.via, note: result.note });
+    await setStep(id, "content", { status: "done", output: result.output, via: result.via, note: result.note, usage });
     await recordDrafts(id, result.output.postIds, { research, strategy });
     return result.output.postIds;
   } catch (error) {
-    await fail(id, "content", error, { research, strategy });
+    await fail(id, "content", error, { research, strategy }, usage);
     return null;
   }
 }
 
 /** Marks a later agent failed without failing the campaign. */
 async function softFail(id: string, agent: AgentId, error: unknown) {
-  await setStep(id, agent, { status: "failed", error: safeErr(error), note: "The drafts are safe; this agent's part is missing." });
+  await setStep(id, agent, { status: "failed", error: safeErr(error), usage: usageOf(error), note: "The drafts are safe; this agent's part is missing." });
 }
 
 export type Tracking = { campaignTag?: string };
@@ -150,8 +161,8 @@ export async function communityStage(id: string, research: Research, strategy: S
   await setStep(id, "community", { status: "running" });
   try {
     const { campaign, brand } = loaded;
-    const result = await runCommunity({ research, strategy, brand, goal: campaign.goal, url: campaign.url });
-    await setStep(id, "community", { status: "done", output: result.output, via: result.via, note: result.note });
+    const { value: result, usage } = await metered(() => runCommunity({ research, strategy, brand, goal: campaign.goal, url: campaign.url }));
+    await setStep(id, "community", { status: "done", output: result.output, via: result.via, note: result.note, usage });
     return true;
   } catch (error) {
     await softFail(id, "community", error);
@@ -165,8 +176,8 @@ export async function analystStage(id: string, research: Research, strategy: Str
   await setStep(id, "analyst", { status: "running" });
   try {
     const { campaign, brand } = loaded;
-    const result = await runAnalyst({ research, strategy, brand, goal: campaign.goal, campaignTag: tracking.campaignTag });
-    await setStep(id, "analyst", { status: "done", output: result.output, via: result.via, note: result.note });
+    const { value: result, usage } = await metered(() => runAnalyst({ research, strategy, brand, goal: campaign.goal, campaignTag: tracking.campaignTag }));
+    await setStep(id, "analyst", { status: "done", output: result.output, via: result.via, note: result.note, usage });
     return true;
   } catch (error) {
     await softFail(id, "analyst", error);

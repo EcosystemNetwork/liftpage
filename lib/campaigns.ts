@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { AGENT_ROSTER } from "./agents/roster";
 import { db, must } from "./supabase/server";
 import type { AgentId, AgentStep, Campaign, CampaignStatus, StepStatus } from "./types";
+import { addUsage, type Usage } from "./usage-format";
 
 type Row = Record<string, unknown>;
 
@@ -21,6 +22,7 @@ function toStep(row: Row): AgentStep {
     note: (row.note as string) ?? "",
     output: opt<unknown>(row.output),
     error: opt<string>(row.error),
+    usage: opt<Usage>(row.usage),
   };
 }
 
@@ -43,6 +45,7 @@ function toCampaign(row: Row): Campaign {
     finishedAt: opt<string>(row.finished_at),
     postIds: (row.post_ids as string[]) ?? [],
     steps,
+    usage: addUsage(...steps.map((step) => step.usage)),
   };
 }
 
@@ -107,7 +110,7 @@ export async function claimCampaign(id: string): Promise<boolean> {
 export async function setStep(
   campaignId: string,
   agent: AgentId,
-  patch: { status: StepStatus; via?: string; note?: string; output?: unknown; error?: string },
+  patch: { status: StepStatus; via?: string; note?: string; output?: unknown; error?: string; usage?: Usage },
 ) {
   const now = new Date().toISOString();
   const row: Row = { status: patch.status };
@@ -117,6 +120,7 @@ export async function setStep(
   if (patch.note !== undefined) row.note = patch.note;
   if (patch.output !== undefined) row.output = patch.output;
   if (patch.error !== undefined) row.error = patch.error;
+  if (patch.usage !== undefined) row.usage = patch.usage;
   must(await db().from("agent_steps").update(row).eq("campaign_id", campaignId).eq("agent", agent), "save step");
 }
 
