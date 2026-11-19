@@ -22,7 +22,7 @@ export async function GET(request: Request) {
   return Response.json({ campaign: await latestCampaign(board) });
 }
 
-/** Starts a campaign from a website: Research → Strategy → Content, drafts only. Admins only. */
+/** Starts a campaign from a website: all six agents, drafts only, nothing scheduled. Admins only. */
 export async function POST(request: Request) {
   const admin = await adminOrResponse();
   if (admin instanceof Response) return admin;

@@ -11,7 +11,19 @@ import { refresh } from "../social/oauth";
 import { publishPost } from "../social/publish";
 import { db } from "../supabase/server";
 import type { Platform } from "../types";
-import { beginCampaign, contentStart, finishStage, newsletterStage, postsStage, researchStage, strategyStage } from "../agents/run";
+import {
+  analystStage,
+  beginCampaign,
+  communityStage,
+  contentStart,
+  distributionStage,
+  finishStage,
+  newsletterStage,
+  postsStage,
+  researchStage,
+  strategyStage,
+  wrapStage,
+} from "../agents/run";
 import type { Cut, Letter } from "../agents/content";
 import type { Research, Strategy } from "../agents/parse";
 import { enabledAutopilots, runAutopilot } from "../autopilot";
@@ -176,7 +188,15 @@ export const campaignRun = inngest.createFunction(
     ])) as [Cut | null, Letter];
     if (!cut) return { stopped: "content" };
     const postIds = await step.run("content-save", () => finishStage(campaignId, research, strategy, cut, letter));
-    return { posts: postIds?.length ?? 0 };
+    if (!postIds) return { stopped: "content" };
+    const tracking = await step.run("distribution", () => distributionStage(campaignId, postIds, strategy, letter.text));
+    // Soft stages: they record their own failure and return false, so no retry fires.
+    await Promise.all([
+      step.run("community", () => communityStage(campaignId, research, strategy)),
+      step.run("analyst", () => analystStage(campaignId, research, strategy, tracking)),
+    ]);
+    await step.run("wrap", () => wrapStage(campaignId, postIds, research, strategy));
+    return { posts: postIds.length };
   },
 );
 

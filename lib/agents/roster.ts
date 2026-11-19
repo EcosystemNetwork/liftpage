@@ -9,7 +9,7 @@ export const AGENT_ROSTER: { id: AgentId; label: string; job: string; ready: boo
   { id: "research", label: "Research", job: "Reads the site and any competitor pages: product, audience, proof, gaps.", ready: true },
   { id: "strategy", label: "Strategy", job: "Positioning, three messaging pillars, a channel plan, and seven days of themes.", ready: true },
   { id: "content", label: "Content", job: "Cuts native posts for each network and a newsletter issue, as drafts.", ready: true },
-  { id: "distribution", label: "Distribution", job: "Slots the approved posts and tags every link for tracking.", ready: false },
-  { id: "community", label: "Community", job: "Finds communities and creator profiles to reach, and drafts outreach.", ready: false },
-  { id: "analyst", label: "Growth analyst", job: "Reads the numbers and proposes next week's experiments.", ready: false },
+  { id: "distribution", label: "Distribution", job: "Slots the approved posts and tags every link for tracking.", ready: true },
+  { id: "community", label: "Community", job: "Finds communities and creator profiles to reach, and drafts outreach.", ready: true },
+  { id: "analyst", label: "Growth analyst", job: "Reads the numbers and proposes next week's experiments.", ready: true },
 ];

@@ -123,3 +123,65 @@ export function campaignBrief(research: Research, strategy: Strategy, goal: stri
   ].filter(Boolean);
   return lines.join("\n").slice(0, 3800);
 }
+
+export type Community = {
+  communities: { name: string; where: string; why: string; etiquette: string }[];
+  creatorSearches: { platform: Platform; query: string; fit: string }[];
+  outreach: { to: string; channel: string; subject: string; message: string }[];
+  cautions: string[];
+};
+
+/**
+ * Community answers are leads to check, never facts: names are kept as the model gave them
+ * and the desk labels every one "unchecked". Outreach must leave the person's name as a
+ * placeholder, so a draft can't go out addressed to someone the model made up.
+ */
+export function parseCommunity(text: string): Community | null {
+  const raw = jsonObject(text);
+  if (!raw) return null;
+  const communities = records(raw.communities, 8)
+    .map((item) => ({ name: str(item.name, 120), where: str(item.where, 80), why: str(item.why, 240), etiquette: str(item.etiquette, 240) }))
+    .filter((item) => item.name);
+  const creatorSearches = records(raw.creatorSearches, 8)
+    .map((item) => ({ platform: str(item.platform, 20).toLowerCase() as Platform, query: str(item.query, 160), fit: str(item.fit, 240) }))
+    .filter((item) => PLATFORM_SET.has(item.platform) && item.query);
+  const outreach = records(raw.outreach, 4)
+    .map((item) => ({ to: str(item.to, 120), channel: str(item.channel, 60), subject: str(item.subject, 160), message: clean(item.message, 1500) }))
+    .filter((item) => item.message.length > 40)
+    .map((item) => (/\[[A-Z][A-Z _]*\]/.test(item.message) ? item : { ...item, message: `Hi [NAME],\n\n${item.message}` }));
+  if (!communities.length && !creatorSearches.length) return null;
+  return { communities, creatorSearches, outreach, cautions: list(raw.cautions, 5, 240) };
+}
+
+/** Like str, but keeps line breaks (outreach drafts are meant to be read as messages). */
+function clean(value: unknown, max: number): string {
+  return typeof value === "string" ? value.replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim().slice(0, max) : "";
+}
+
+export type Analysis = {
+  readout: string;
+  baseline: string[];
+  experiments: { name: string; hypothesis: string; change: string; metric: string; successBar: string; days: number }[];
+  tracking: string[];
+};
+
+export function parseAnalysis(text: string): Analysis | null {
+  const raw = jsonObject(text);
+  if (!raw) return null;
+  const readout = str(raw.readout, 800);
+  const experiments = records(raw.experiments, 4)
+    .map((item) => {
+      const days = Number(item.days);
+      return {
+        name: str(item.name, 120),
+        hypothesis: str(item.hypothesis, 300),
+        change: str(item.change, 300),
+        metric: str(item.metric, 120),
+        successBar: str(item.successBar, 200),
+        days: Number.isFinite(days) && days >= 3 && days <= 30 ? Math.round(days) : 7,
+      };
+    })
+    .filter((item) => item.name && item.hypothesis && item.metric);
+  if (!readout || !experiments.length) return null;
+  return { readout, baseline: list(raw.baseline, 8, 200), experiments, tracking: list(raw.tracking, 6, 200) };
+}

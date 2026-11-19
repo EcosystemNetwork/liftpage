@@ -126,3 +126,8 @@ export async function finishCampaign(id: string, status: "ready" | "failed", pat
   if (patch.memory !== undefined) row.memory = patch.memory;
   must(await db().from("campaigns").update(row).eq("id", id), "finish campaign");
 }
+
+/** Links the drafts and keeps the research while later agents are still working. */
+export async function recordDrafts(id: string, postIds: string[], memory: unknown) {
+  must(await db().from("campaigns").update({ post_ids: postIds, memory }).eq("id", id), "save campaign drafts");
+}

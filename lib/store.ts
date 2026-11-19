@@ -249,6 +249,7 @@ export async function loadPost(id: string): Promise<{ post: Post; brandId: strin
 }
 
 export type PostPatch = Partial<{
+  slot: string;
   hook: string;
   caption: string;
   visual: string;
