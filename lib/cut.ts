@@ -1,4 +1,4 @@
-import { askHarnessRouter, askTokenRouter, complete, harnessName, harnessReady, safeErr, tokenReady, type AiVia } from "./ai";
+import { askHarnessRouter, askTokenRouter, backendLabel, complete, harnessName, harnessReady, routeAllows, safeErr, tokenReady, type AiRoute, type AiVia } from "./ai";
 import { nid } from "./id";
 import { futureSlots } from "./time";
 import type { Brand, CutVia, Platform, Post } from "./types";
@@ -197,14 +197,14 @@ function brandLines(brand: Brand): string[] {
 
 const HOUSE_RULES = "No hashtag walls. No “excited to announce”. No emoji. Keep the facts in the brief. Do not invent metrics, customers, quotes, or dates.";
 
-function prompt(brand: Brand, brief: string): string {
+function prompt(brand: Brand, brief: string, count = 6): string {
   return [
     ...brandLines(brand),
     "Cut a week of posts from the brief. Each post is native to its platform. Do not resize one caption.",
     HOUSE_RULES,
     ...platformRules(brand.platforms),
     'Return JSON only: {"posts":[{"platform":"x|instagram|tiktok|linkedin|youtube","hook":"","caption":"","visual":"","reply":""}]}',
-    "Write 6 posts.",
+    `Write ${count} posts.`,
     "",
     `Brief: ${brief}`,
   ].join("\n");
@@ -214,28 +214,39 @@ export async function cutWeek(
   brief: string,
   brand: Brand,
   /** review: false skips HarnessRouter's second "tighten" pass, halving the time (campaign steps run under a host time limit). */
-  options: { review?: boolean } = {},
+  options: {
+    review?: boolean;
+    /** Admin-picked backend, harness, and model. Omitted: the env defaults, both backends. */
+    route?: AiRoute;
+    /** How many posts to ask for, 3–8. Default 6. */
+    count?: number;
+  } = {},
 ): Promise<{ posts: Post[]; via: CutVia; note: string }> {
   const slots = futureSlots(8);
+  const route = options.route;
+  const count = Math.min(8, Math.max(3, Math.round(options.count ?? 6)));
+  const ask = prompt(brand, brief, count);
+  const useHarness = harnessReady() && routeAllows(route, "harnessrouter");
+  const harnessLabel = backendLabel("harnessrouter", route ?? {});
   const notes: string[] = [];
   let drafts: DraftPost[] | null = null;
   let via: CutVia = "local";
 
-  if (harnessReady()) {
+  if (useHarness) {
     try {
-      drafts = parsePosts(await askHarnessRouter(prompt(brand, brief)), slots);
+      drafts = parsePosts(await askHarnessRouter(ask, undefined, route), slots);
       if (drafts) {
         via = "harnessrouter";
-        notes.push(`HarnessRouter (${harnessName()}) cut the week.`);
+        notes.push(`${harnessLabel} cut the week.`);
       } else notes.push("HarnessRouter answered, but the JSON was unusable.");
     } catch (error) {
       notes.push(`HarnessRouter skipped: ${safeErr(error)}`);
     }
   }
 
-  if (!drafts && tokenReady()) {
+  if (!drafts && tokenReady() && routeAllows(route, "tokenrouter")) {
     try {
-      drafts = parsePosts(await askTokenRouter(prompt(brand, brief)), slots);
+      drafts = parsePosts(await askTokenRouter(ask), slots);
       if (drafts) {
         via = "tokenrouter";
         notes.push("TokenRouter cut the week.");
@@ -245,18 +256,20 @@ export async function cutWeek(
     }
   }
 
-  if (drafts && options.review !== false && harnessReady() && via !== "local") {
+  if (drafts && options.review !== false && useHarness && via !== "local") {
     try {
       const reviewed = parsePosts(
         await askHarnessRouter(
-          `${prompt(brand, brief)}\n\nTighten this JSON. Keep the facts. Return the same shape.\n${JSON.stringify({ posts: drafts })}`,
+          `${ask}\n\nTighten this JSON. Keep the facts. Return the same shape.\n${JSON.stringify({ posts: drafts })}`,
+          undefined,
+          route,
         ),
         slots,
       );
       if (reviewed) {
         drafts = reviewed;
         if (via === "tokenrouter") via = "both";
-        notes.push(`HarnessRouter (${harnessName()}) passed the cut.`);
+        notes.push(`${harnessLabel} passed the cut.`);
       } else notes.push("HarnessRouter pass returned unusable JSON. Kept the first cut.");
     } catch (error) {
       notes.push(`HarnessRouter pass skipped: ${safeErr(error)}`);
@@ -272,7 +285,13 @@ export async function cutWeek(
   return {
     via,
     note: notes.join(" "),
-    posts: drafts.map((draft) => ({ ...draft, id: nid("p"), status: "draft" as const, publishState: "idle" as const, notes: [] })),
+    posts: (via === "local" ? drafts : drafts.slice(0, count)).map((draft) => ({
+      ...draft,
+      id: nid("p"),
+      status: "draft" as const,
+      publishState: "idle" as const,
+      notes: [],
+    })),
   };
 }
 

@@ -1,9 +1,6 @@
 import { reportAll, syncAll } from "@/app/actions/clients";
 import { BroadcastForm, ToolButton } from "@/components/ClientTools";
-import { Writer } from "@/components/Writer";
-import { aiReady } from "@/lib/ai";
-import { listBoards } from "@/lib/store";
-import { FORMATS } from "@/lib/write";
+import Link from "next/link";
 import { loadAccounts } from "@/lib/accounts";
 import { weeklyReportsOn } from "@/lib/admin";
 import { requireAdmin } from "@/lib/dal";
@@ -16,7 +13,7 @@ export const metadata = { title: "Tools" };
 
 export default async function ToolsPage() {
   await requireAdmin("/admin/tools");
-  const [{ users }, boards] = await Promise.all([loadAccounts(), listBoards()]);
+  const { users } = await loadAccounts();
   const clients = users.filter((u) => u.role === "client" && !u.disabled);
   const counts = Object.fromEntries(CLIENT_STAGES.map((s) => [s, clients.filter((c) => c.stage === s).length])) as Record<ClientStage, number>;
 
@@ -35,19 +32,17 @@ export default async function ToolsPage() {
         </p>
       </section>
 
-      <section aria-labelledby="writer">
+      <section aria-labelledby="writer" className="max-w-2xl">
         <h2 id="writer" className="mb-1 display text-3xl">
           Write
         </h2>
-        <p className="mb-4 text-sm text-muted">
-          Newsletters, press, launch pages, event plans, outreach, ads, founder posts, clip plans, community plans, and read-outs, in the board&rsquo;s voice. Runs on
-          HarnessRouter, then TokenRouter. Nothing is sent or saved; edit the draft and take it where it goes.
+        <p className="text-sm text-muted">
+          The writer moved to{" "}
+          <Link href="/admin/content" className="link">
+            Content
+          </Link>
+          , where you can pick the HarnessRouter harness and model, save pieces per board, and generate social posts onto a board.
         </p>
-        <Writer
-          ready={aiReady()}
-          boards={boards.map((b) => ({ id: b.id, label: b.company && b.company !== b.name ? `${b.name} · ${b.company}` : b.name }))}
-          formats={Object.entries(FORMATS).map(([id, f]) => ({ id, label: f.label, hint: f.service }))}
-        />
       </section>
 
       <section aria-labelledby="broadcast" className="max-w-2xl">

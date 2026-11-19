@@ -6,6 +6,7 @@ const TABS = [
   ["/admin/growth", "Growth"],
   ["/admin/creative", "Creative"],
   ["/admin/messages", "Messages"],
+  ["/admin/content", "Content"],
   ["/admin/tools", "Tools"],
   ["/admin/activity", "Activity"],
   ["/admin/users", "Users"],

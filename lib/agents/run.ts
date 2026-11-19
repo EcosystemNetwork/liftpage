@@ -1,13 +1,13 @@
 import "server-only";
 import { safeErr } from "../ai";
-import { claimCampaign, finishCampaign, loadCampaign, recordDrafts, setStep } from "../campaigns";
+import { claimCampaign, finishCampaign, loadCampaign, previousMemory, recordDrafts, setStep } from "../campaigns";
 import { loadBrand } from "../store";
 import type { AgentId, Brand, Campaign } from "../types";
 import { saveContent, writeNewsletter, writePosts, type ContentInput, type Cut, type Letter } from "./content";
 import { runAnalyst } from "./analyst";
 import { runCommunity } from "./community";
 import { runDistribution } from "./distribution";
-import type { Research, Strategy } from "./parse";
+import { parseStrategy, type Research, type Strategy } from "./parse";
 import { addUsage, metered, usageOf, type Usage } from "../usage";
 import { runResearch } from "./research";
 import { runStrategy } from "./strategy";
@@ -43,6 +43,21 @@ async function fail(id: string, agent: AgentId, error: unknown, memory: { resear
   await finishCampaign(id, "failed", { memory });
 }
 
+/**
+ * The strategy from the brand's last finished campaign, re-checked against today's schema.
+ * Memory is a nice-to-have: any problem reading it means the run just starts fresh.
+ */
+async function priorStrategy(campaign: Campaign): Promise<{ strategy: Strategy; at: string } | undefined> {
+  try {
+    const found = await previousMemory(campaign.brandId, campaign.id);
+    const saved = (found?.memory as { strategy?: unknown } | null)?.strategy;
+    const strategy = saved ? parseStrategy(JSON.stringify(saved)) : null;
+    return found && strategy ? { strategy, at: found.at } : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Takes a queued campaign. False if it's gone or another runner already has it. */
 export async function beginCampaign(id: string): Promise<boolean> {
   if (!(await claimCampaign(id))) return false;
@@ -71,7 +86,8 @@ export async function strategyStage(id: string, research: Research): Promise<Str
   if (!loaded) return null;
   await setStep(id, "strategy", { status: "running" });
   try {
-    const { value: result, usage } = await metered(() => runStrategy({ research, brand: loaded.brand, goal: loaded.campaign.goal }));
+    const previous = await priorStrategy(loaded.campaign);
+    const { value: result, usage } = await metered(() => runStrategy({ research, brand: loaded.brand, goal: loaded.campaign.goal, previous }));
     await setStep(id, "strategy", { status: "done", output: result.output, via: result.via, note: result.note, usage });
     return result.output;
   } catch (error) {

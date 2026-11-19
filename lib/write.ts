@@ -1,5 +1,5 @@
 import "server-only";
-import { complete, harnessName, type AiVia } from "./ai";
+import { backendLabel, complete, type AiRoute, type AiVia } from "./ai";
 import { FORMATS, type FormatId } from "./formats";
 import type { Brand } from "./types";
 
@@ -11,7 +11,13 @@ export { FORMATS, isFormat, type FormatId } from "./formats";
  * and send. Nothing here publishes or stores anything.
  */
 
-export async function writePiece(format: FormatId, brand: Brand, brief: string): Promise<{ text: string; via: AiVia; note: string } | { error: string }> {
+export async function writePiece(
+  format: FormatId,
+  brand: Brand,
+  brief: string,
+  /** Admin-picked backend, harness, and model. Omitted: HarnessRouter then TokenRouter, env defaults. */
+  route?: AiRoute,
+): Promise<{ text: string; via: AiVia; note: string } | { error: string }> {
   const spec = FORMATS[format];
   const ask = [
     `You write for LiftPage, a social media agency, on behalf of ${brand.name} (${brand.handle}).`,
@@ -29,8 +35,8 @@ export async function writePiece(format: FormatId, brand: Brand, brief: string):
     temperature: 0.6,
     maxOutputTokens: 4000,
     accept: (text) => text.trim().length > 80,
+    route,
   });
   if ("error" in answer) return { error: answer.error };
-  const name = answer.via === "tokenrouter" ? "TokenRouter" : `HarnessRouter (${harnessName()})`;
-  return { text: answer.text.trim(), via: answer.via, note: [...answer.notes, `${name} wrote it.`].join(" ") };
+  return { text: answer.text.trim(), via: answer.via, note: [...answer.notes, `${backendLabel(answer.via, route)} wrote it.`].join(" ") };
 }
