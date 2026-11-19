@@ -1,0 +1,7 @@
+# Build command, publish dir and plugin are set in the Netlify UI.
+
+[build.environment]
+  # Turbopack's persistent build cache records env values it read (for cache
+  # invalidation). It is never deployed, so exclude it from secrets scanning.
+  # Client/server output (.next/static, .next/server) is still scanned.
+  SECRETS_SCAN_OMIT_PATHS = ".netlify/.next/cache/**,.next/cache/**"
