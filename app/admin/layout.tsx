@@ -3,6 +3,7 @@ import { Header } from "@/components/Header";
 
 const TABS = [
   ["/admin", "Overview"],
+  ["/admin/growth", "Growth"],
   ["/admin/messages", "Messages"],
   ["/admin/tools", "Tools"],
   ["/admin/activity", "Activity"],
