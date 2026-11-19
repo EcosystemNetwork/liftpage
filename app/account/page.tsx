@@ -32,6 +32,7 @@ import { loadServices } from "@/lib/services-load";
 import { ApproveAll } from "@/components/BoardForms";
 import { Calendar, MonthRecap, Wins } from "@/components/Recap";
 import { calendar, monthRecap, wins } from "@/lib/recap";
+import { canUse } from "@/lib/tools";
 
 export const metadata = { title: "Account" };
 
@@ -207,6 +208,21 @@ export default async function AccountPage({ searchParams }: PageProps<"/account"
                   ) : null}
                   {user.tools.includes("redraft") ? <p className="text-sm text-muted">To redraft a post, find it under Posts to approve and say what to change.</p> : null}
                 </div>
+              </section>
+            ) : null}
+
+            {canUse(user, "studio") ? (
+              <section id="studio" aria-labelledby="studio-title" className="max-w-3xl scroll-mt-20">
+                <h2 id="studio-title" className="display text-3xl">
+                  Content studio
+                </h2>
+                <p className="mt-2 mb-4 text-muted">
+                  Ask the content agent for posts, carousels or video scripts. Give it your site, a brief or product photos, then send feedback until it&rsquo;s right.
+                  Everything it makes is a draft.
+                </p>
+                <Link href="/account/studio" className="btn-primary">
+                  Open the content studio
+                </Link>
               </section>
             ) : null}
 

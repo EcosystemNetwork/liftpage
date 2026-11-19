@@ -46,3 +46,6 @@ next-env.d.ts
 
 # Local Netlify folder
 .netlify
+
+# HarnessRouter: ETag kept between harness:pull and harness:push
+/.harnessrouter-etag

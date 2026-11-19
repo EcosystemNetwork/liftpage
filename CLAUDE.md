@@ -44,3 +44,12 @@ This project is indexed by GitNexus as **liftpage** (2004 symbols, 5838 relation
 | Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus-cli/SKILL.md` |
 
 <!-- gitnexus:end -->
+
+<!-- harnessrouter:begin -->
+Agent features run on HarnessRouter Cloud. The setups are in harnessrouter.json (harness_id, name,
+base, model, instructions); the content studio's Harness id is fixed in lib/studio.ts. Reuse them
+before creating new Harnesses. To change one, fetch it live, update harnessrouter.json, PUT the
+whole Harness, and read it back (`npm run harness:pull`, edit, `npm run harness:push`). Every task
+sends the signed-in end user's id as `user`. The key is HARNESSROUTER_API_KEY (or HR_API_KEY) in the
+server environment (.env.local locally); never ask for it in chat.
+<!-- harnessrouter:end -->

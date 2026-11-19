@@ -20,7 +20,7 @@ Desk: http://localhost:3070
 | Supabase Postgres | Boards, posts, review notes, client messages, runs, requests, metrics, network connections, rate limits |
 | Supabase Auth | Sign-in, sign-up, invites, password resets |
 | Supabase Storage | Post media (`post-media` bucket), uploaded straight from the desk on signed URLs |
-| HarnessRouter | Cuts the day from a brief (falls back to the local operator) |
+| HarnessRouter | Cuts the day from a brief (falls back to the local operator); runs the content studio's agent |
 | Inngest | Publishes cued posts at their slot, request emails, daily insight sync, token refresh |
 | X, LinkedIn, Instagram, YouTube, TikTok APIs | Publishing and weekly insights |
 | Stripe | Deposit checkout for a request; the webhook marks it paid |
@@ -50,6 +50,7 @@ Network apps need review before they post publicly. TikTok posts are private (`S
 - `/admin/users`: invite accounts by email, switch accounts off, send reset links, change roles.
 - `/admin/customers/[id]`: one client's message thread, board link (or Open a board), numbers, Sync now.
 - **Content autopilot** (on `/admin/customers/[id]`): switch it on per client, pick a day, write standing instructions. On that day (3pm Pacific, Inngest `content-autopilot`) it reads what the client approved and sent back, last week's numbers by network, and the instructions, then cuts next week as drafts and can email the client to review. It never approves, schedules, or posts, and it holds off while 4+ drafts wait on review. Run now works without Inngest. Needs the `autopilot` migration and an AI backend.
+- **Content studio** (`/account/studio`): a person asks the LiftPage content agent for posts, carousels or short-video scripts, with links, briefs and photos attached, then sends feedback until it's right. Admins always have it; for a client, switch on the Content studio tool under their tools. Each request is one task on the HarnessRouter Harness fixed in `lib/studio.ts` (`harnessrouter.json` is the reviewed copy). Tasks run in HarnessRouter's background mode and the page polls, so nothing waits on a long connection; ids are kept in `studio_tasks` with the person's own rows, and files come through owner-checked routes (generated HTML in a sandboxed, signed preview). Drafts only: the agent publishes nothing without explicit approval. Needs the `studio` migration and `HARNESSROUTER_API_KEY` (or `HR_API_KEY`). To change the agent: `npm run harness:pull`, edit `harnessrouter.json`, `npm run harness:push` (sends the full Harness with `If-Match`; a `CONFLICT` means it changed in HarnessRouter meanwhile, so pull again).
 - `/desk?board=<id>`: one board at a time. Cut, edit, attach media, approve, cue, Publish now, connect networks, read and answer the client's review. Admin-only, as are its APIs.
 
 Identity is Supabase Auth. Role and the switched-off flag live in `profiles` and are read on every request, so a demotion or switch-off bites at once. All tables have row-level security on with no policies: only the server, with the secret key, touches them, after `lib/dal.ts` has checked the caller. Network tokens are sealed with AES-256-GCM before they are stored.

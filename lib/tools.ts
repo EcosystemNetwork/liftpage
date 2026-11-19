@@ -6,11 +6,12 @@ import type { User } from "./types";
  * an admin switched on, and only on their own board. Everything a client makes is a draft.
  */
 
-export type ClientTool = "week" | "redraft" | FormatId;
+export type ClientTool = "week" | "redraft" | "studio" | FormatId;
 
 export const CLIENT_TOOLS: { id: ClientTool; label: string; hint: string }[] = [
   { id: "week", label: "Draft a week of posts", hint: "Writes drafts onto their board from a brief. LiftPage still approves and schedules." },
   { id: "redraft", label: "Redraft a post", hint: "Rewrites one of their draft posts from their own note." },
+  { id: "studio", label: "Content studio", hint: "Chats with the content agent for posts, carousels and video scripts, with their own files. Drafts only; nothing is published." },
   ...(Object.entries(FORMATS) as [FormatId, (typeof FORMATS)[FormatId]][]).map(([id, f]) => ({ id, label: f.label, hint: `Writer: ${f.service}.` })),
 ];
 

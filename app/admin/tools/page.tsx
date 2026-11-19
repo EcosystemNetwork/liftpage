@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { reportAll, syncAll } from "@/app/actions/clients";
 import { BroadcastForm, ToolButton } from "@/components/ClientTools";
 import { Writer } from "@/components/Writer";
@@ -48,6 +49,19 @@ export default async function ToolsPage() {
           boards={boards.map((b) => ({ id: b.id, label: b.company && b.company !== b.name ? `${b.name} · ${b.company}` : b.name }))}
           formats={Object.entries(FORMATS).map(([id, f]) => ({ id, label: f.label, hint: f.service }))}
         />
+      </section>
+
+      <section aria-labelledby="studio" className="max-w-2xl">
+        <h2 id="studio" className="mb-1 display text-3xl">
+          Content studio
+        </h2>
+        <p className="mb-4 text-sm text-muted">
+          The HarnessRouter content agent: posts, carousels and video scripts from a brief, links and files, with follow-ups on the same result. Drafts only. Switch it on
+          for a client under their tools.
+        </p>
+        <Link href="/account/studio" className="btn-primary">
+          Open the content studio
+        </Link>
       </section>
 
       <section aria-labelledby="broadcast" className="max-w-2xl">
