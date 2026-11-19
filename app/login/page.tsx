@@ -1,3 +1,4 @@
+import { NO_INDEX } from "@/lib/seo";
 import { KICKER } from "@/lib/ui";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -7,7 +8,7 @@ import { adminExists, hasAdminEnv, signupOpen } from "@/lib/accounts";
 import { supabaseReady } from "@/lib/supabase/server";
 import { currentUser, safeNext } from "@/lib/dal";
 
-export const metadata = { title: "Sign in" };
+export const metadata = { title: "Sign in", robots: NO_INDEX };
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const { next, error } = await searchParams;

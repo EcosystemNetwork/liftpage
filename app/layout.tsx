@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 import { SkipLink } from "@/components/SkipLink";
+import { DESCRIPTION, SITE } from "@/lib/seo";
 import "./globals.css";
 
 const sans = Geist({
@@ -26,9 +27,32 @@ export const metadata: Metadata = {
     default: "LiftPage — Attention into traction",
     template: "%s — LiftPage",
   },
-  description:
-    "LiftPage is a digital media marketing agency for technology startups, founders, and the communities around them. Instagram, TikTok, X, LinkedIn, and YouTube.",
+  description: DESCRIPTION,
+  metadataBase: new URL(SITE),
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    siteName: "LiftPage",
+    url: "/",
+    title: "LiftPage — Attention into traction",
+    description: DESCRIPTION,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "LiftPage — Attention into traction",
+    description: DESCRIPTION,
+  },
 };
+
+/** Tells search engines who runs the site. Add social profile URLs to sameAs once they're live. */
+const ORGANIZATION = JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "LiftPage",
+  url: `${SITE}/`,
+  logo: `${SITE}/icon.png`,
+  description: DESCRIPTION,
+});
 
 export const viewport: Viewport = {
   themeColor: [
@@ -51,6 +75,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
       <body className="flex min-h-full flex-col bg-canvas text-ink">
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ORGANIZATION }} />
         <SkipLink />
         {children}
       </body>

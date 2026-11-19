@@ -1,9 +1,10 @@
+import { NO_INDEX } from "@/lib/seo";
 import Link from "next/link";
 import { ForgotForm } from "@/components/AuthForms";
 import { Header } from "@/components/Header";
 import { KICKER } from "@/lib/ui";
 
-export const metadata = { title: "Reset password" };
+export const metadata = { title: "Reset password", robots: NO_INDEX };
 
 export default function ForgotPage() {
   return (

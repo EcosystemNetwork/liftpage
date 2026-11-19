@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Header } from "@/components/Header";
+import { Suspense } from "react";
 import { RequestForm } from "@/components/RequestForm";
 import { PACKAGES, type PackageId } from "@/lib/types";
 
@@ -181,7 +182,7 @@ export default function HomePage() {
                     </span>
                     <span className={`eyebrow mt-4 text-[0.6875rem] ${live ? "opacity-70" : "text-muted"}`}>Day {i + 1}</span>
                     {live ? (
-                      <span className="eyebrow mt-3 w-fit rounded-full bg-accent px-2.5 py-1 text-[0.625rem] text-canvas">
+                      <span className="eyebrow mt-3 w-fit rounded-full bg-accent px-2.5 py-1 text-[0.6875rem] text-canvas">
                         Every channel live
                       </span>
                     ) : null}
@@ -222,7 +223,7 @@ export default function HomePage() {
               <article className="panel relative overflow-hidden p-6 md:col-span-2 md:p-8">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <p className="eyebrow text-[0.6875rem] text-accent">Service · 01</p>
-                  <span className="eyebrow rounded-full bg-accent px-3 py-1 text-[0.625rem] text-canvas">Agents + a person</span>
+                  <span className="eyebrow rounded-full bg-accent px-3 py-1 text-[0.6875rem] text-canvas">Agents + a person</span>
                 </div>
                 <h3 className="display mt-4 text-4xl">AI content production</h3>
                 <p className="mt-3 max-w-xl leading-relaxed text-muted">
@@ -367,7 +368,7 @@ export default function HomePage() {
                     }`}
                   >
                     {featured ? (
-                      <span className="eyebrow absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-accent px-3 py-1 text-[0.625rem] text-canvas">
+                      <span className="eyebrow absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-accent px-3 py-1 text-[0.6875rem] text-canvas">
                         Popular
                       </span>
                     ) : null}
@@ -392,7 +393,7 @@ export default function HomePage() {
                       ))}
                     </ul>
                     <Link
-                      href="/#start"
+                      href={`/?package=${id}#start`}
                       className={`mt-8 w-full ${featured ? "btn bg-accent text-canvas hover:bg-canvas hover:text-ink" : "btn-ghost"}`}
                     >
                       {id === "event" ? "Plan a launch" : `Choose ${pkg.name}`}
@@ -432,7 +433,9 @@ export default function HomePage() {
               </ul>
             </div>
             <div className="panel p-6 shadow-card md:p-10">
-              <RequestForm />
+              <Suspense fallback={<RequestForm />}>
+                <RequestForm fromUrl />
+              </Suspense>
             </div>
           </div>
         </section>
@@ -447,17 +450,17 @@ export default function HomePage() {
               <p className="display text-2xl italic">Attention into traction.</p>
               <p className="mt-1 text-sm text-muted">Digital media for companies creating the future.</p>
             </div>
-            <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-2 font-mono text-xs uppercase tracking-wider text-muted">
-              <Link href="/#services" className="hover:text-ink">
+            <nav aria-label="Footer" className="flex flex-wrap gap-x-4 font-mono text-xs uppercase tracking-wider text-muted">
+              <Link href="/#services" className="inline-flex min-h-11 items-center hover:text-ink">
                 Services
               </Link>
-              <Link href="/#rates" className="hover:text-ink">
+              <Link href="/#rates" className="inline-flex min-h-11 items-center hover:text-ink">
                 Pricing
               </Link>
-              <Link href="/login" className="hover:text-ink">
+              <Link href="/login" className="inline-flex min-h-11 items-center hover:text-ink">
                 Sign in
               </Link>
-              <Link href="/#start" className="hover:text-ink">
+              <Link href="/#start" className="inline-flex min-h-11 items-center hover:text-ink">
                 Start a campaign
               </Link>
             </nav>
@@ -494,7 +497,7 @@ function PostStack() {
                 <span className="block text-sm font-medium">{post.handle}</span>
                 <span className="block font-mono text-[0.6875rem] text-muted">{post.platform}</span>
               </span>
-              <span className="eyebrow inline-flex items-center gap-1.5 rounded-full bg-sunken px-2.5 py-1 text-[0.5625rem] text-muted">
+              <span className="eyebrow inline-flex items-center gap-1.5 rounded-full bg-sunken px-2.5 py-1 text-[0.6875rem] text-muted">
                 <span className="size-1.5 rounded-full bg-accent" aria-hidden="true" />
                 Draft
               </span>
@@ -502,7 +505,7 @@ function PostStack() {
             <h3 className="display mt-4 text-2xl">{post.hook}</h3>
             <p className="mt-2 text-sm leading-relaxed text-muted">{post.caption}</p>
             {top ? (
-              <p className="eyebrow mt-5 flex items-center gap-2 rounded-lg border border-line bg-sunken px-3 py-2 text-[0.625rem] text-ink">
+              <p className="eyebrow mt-5 flex items-center gap-2 rounded-lg border border-line bg-sunken px-3 py-2 text-[0.6875rem] text-ink">
                 <span aria-hidden="true" className="text-accent">
                   ✓
                 </span>

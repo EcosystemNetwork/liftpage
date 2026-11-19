@@ -2,9 +2,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { logout } from "@/app/actions/auth";
 import { currentUser } from "@/lib/dal";
+import { MobileMenu } from "./MobileMenu";
 import { ThemeToggle } from "./ThemeToggle";
 
-const LINKS = [
+const LINKS: readonly (readonly [string, string])[] = [
   ["/#platforms", "Platforms"],
   ["/#services", "Services"],
   ["/#engine", "HarnessRouter"],
@@ -18,7 +19,7 @@ export function Wordmark() {
   return (
     <Link href="/" className="group inline-flex items-baseline gap-1.5" aria-label="LiftPage home">
       {/* 468×530 source, cropped tight to the mark. Decorative: the link carries the name. */}
-      <Image src="/liftlogo.png" alt="" width={468} height={530} loading="eager" className="h-7 w-auto self-center" />
+      <Image src="/liftlogo.png" alt="" width={468} height={530} loading="eager" className="logo-mark h-7 w-auto self-center" />
       <span className="display text-[1.75rem] leading-none">LiftPage</span>
       <span aria-hidden="true" className="size-1.5 translate-y-[-2px] rounded-full bg-accent transition-transform group-hover:-translate-y-1.5" />
     </Link>
@@ -62,16 +63,25 @@ export async function Header() {
                   </Link>
                 ))}
               </span>
-              <Link href="/login" className={NAV}>
+              <Link href="/login" className={`${NAV.replace("inline-flex ", "")} hidden md:inline-flex`}>
                 Sign in
               </Link>
             </>
           )}
-          <ThemeToggle />
+          {user ? (
+            <ThemeToggle />
+          ) : (
+            <span className="hidden md:inline-flex">
+              <ThemeToggle />
+            </span>
+          )}
           {user ? null : (
-            <Link href="/#start" className="btn-primary btn-sm ml-1">
-              Start a campaign
-            </Link>
+            <>
+              <Link href="/#start" className="btn-primary btn-sm ml-1">
+                Start a campaign
+              </Link>
+              <MobileMenu links={[...LINKS, ["/login", "Sign in"]]} />
+            </>
           )}
         </nav>
       </div>

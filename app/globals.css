@@ -12,8 +12,10 @@
   --muted: #4f4a42;
   --line: #ded7cb;
   --line-strong: #17150f;
-  --accent: #c2410c;
+  --accent: #b93d0b;
   --accent-soft: #f7e3d8;
+  /* Accent on the inverted bg-ink panels (pricing "Popular", launch day, HarnessRouter). */
+  --accent-on-ink: #ff7a4d;
   --danger: #b42318;
   --danger-soft: #fbe6e3;
   --shadow: 0 1px 2px rgb(23 21 15 / 0.04), 0 8px 24px -12px rgb(23 21 15 / 0.12);
@@ -31,6 +33,7 @@
     --line-strong: #f3efe7;
     --accent: #ff7a4d;
     --accent-soft: #3a2118;
+    --accent-on-ink: #b03a0a;
     --danger: #ff8a7a;
     --danger-soft: #3a1c18;
     --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 12px 32px -16px rgb(0 0 0 / 0.6);
@@ -48,6 +51,7 @@
   --line-strong: #f3efe7;
   --accent: #ff7a4d;
   --accent-soft: #3a2118;
+  --accent-on-ink: #b03a0a;
   --danger: #ff8a7a;
   --danger-soft: #3a1c18;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 12px 32px -16px rgb(0 0 0 / 0.6);
@@ -258,4 +262,23 @@ body {
 
 .skip-link:focus {
   top: 1rem;
+}
+
+/*
+ * Audit fixes.
+ * Orange text on the inverted bg-ink panels was 3.5:1 (light) and 2.3:1 (dark).
+ * This swaps in a tone that passes 4.5:1 on that surface in both themes.
+ */
+.bg-ink .text-accent {
+  color: var(--accent-on-ink);
+}
+
+/* The navy logo mark disappears on the dark canvas. Lighten it in dark mode. */
+:root[data-theme="dark"] .logo-mark {
+  filter: invert(1) hue-rotate(180deg) brightness(1.15);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .logo-mark {
+    filter: invert(1) hue-rotate(180deg) brightness(1.15);
+  }
 }

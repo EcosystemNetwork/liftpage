@@ -1,9 +1,10 @@
+import { NO_INDEX } from "@/lib/seo";
 import { SetPasswordForm } from "@/components/AuthForms";
 import { Header } from "@/components/Header";
 import { requireUser } from "@/lib/dal";
 import { KICKER } from "@/lib/ui";
 
-export const metadata = { title: "Set your password" };
+export const metadata = { title: "Set your password", robots: NO_INDEX };
 
 export default async function SetPasswordPage() {
   const user = await requireUser("/auth/password");

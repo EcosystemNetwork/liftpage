@@ -1,3 +1,4 @@
+import { NO_INDEX } from "@/lib/seo";
 import { KICKER } from "@/lib/ui";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -6,7 +7,7 @@ import { Header } from "@/components/Header";
 import { signupOpen } from "@/lib/accounts";
 import { currentUser } from "@/lib/dal";
 
-export const metadata = { title: "Create an account" };
+export const metadata = { title: "Create an account", robots: NO_INDEX };
 
 export default async function SignupPage() {
   if (await currentUser()) redirect("/account");
