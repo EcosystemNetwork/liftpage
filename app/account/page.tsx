@@ -5,6 +5,8 @@ import { ClientBoard } from "@/components/ClientBoard";
 import { ClientWeekForm } from "@/components/ClientAi";
 import { CampaignForm } from "@/components/CampaignForm";
 import { ClientOverview } from "@/components/ClientOverview";
+import { ClientResults } from "@/components/ClientResults";
+import { boardReport, listLeads, trackKeyFor } from "@/lib/attribution-store";
 import { PhotoLibrary } from "@/components/PhotoLibrary";
 import { SocialSetupForm } from "@/components/SocialSetup";
 import { listPhotos, loadSetup } from "@/lib/client-files";
@@ -53,6 +55,10 @@ export default async function AccountPage({ searchParams }: PageProps<"/account"
   const unread = messages.filter((m) => m.role === "admin" && !m.readAt).length;
   const metrics = (must(rows, "load numbers") ?? []).map(toMetric);
   const connections = board ? await connectionsFor(board.brand.id) : [];
+  // Results are extra: if attribution isn't set up (or its tables aren't there yet), skip them.
+  const results = board
+    ? await Promise.all([boardReport(board.brand.id), listLeads(board.brand.id, 10), trackKeyFor(board.brand.id)]).catch(() => null)
+    : null;
   const synced = connections.length > 0;
   const work = isClient && suite ? await loadServices({ user, board, connections, metrics, projects: suite.projects }) : null;
   const today = new Date().toISOString().slice(0, 10);
@@ -141,6 +147,16 @@ export default async function AccountPage({ searchParams }: PageProps<"/account"
               projects={suite.projects}
               data={overview({ metrics, posts: board?.posts ?? [], connections, platforms: board?.brand.platforms ?? [] })}
             />
+
+            {results ? (
+              <section id="results" aria-labelledby="results-title" className="scroll-mt-20">
+                <h2 id="results-title" className="display text-3xl">
+                  Campaign results
+                </h2>
+                <p className="mt-2 mb-4 text-muted">From post, to visit, to lead, to sale.</p>
+                <ClientResults report={results[0]} leads={results[1]} tracking={Boolean(results[2])} />
+              </section>
+            ) : null}
 
             <section id="month" aria-labelledby="month-title" className="scroll-mt-20">
               <h2 id="month-title" className="display text-3xl">
